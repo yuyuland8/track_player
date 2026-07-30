@@ -133,12 +133,23 @@ export function useSession(onToast: (msg: string) => void) {
           onToast(`欢迎回来，${user.name}！`);
         }
 
-        // 如果 URL 带了邀请参数，自动双向加入
+        // 如果 URL 带了邀请参数，自动双向加入（内联避免 stale state）
         const inviteId = getInviteUserIdFromURL();
         if (inviteId && inviteId !== user.id) {
-          await handleJoin(inviteId);
+          try {
+            const targetUser = await getUser(inviteId);
+            if (targetUser) {
+              await joinFriendBidirectional(user.id, inviteId);
+              await loadFriends(track.id);
+              onToast(`你已和 ${targetUser.name} 互相加入跑道！`);
+            } else {
+              onToast("找不到这个用户，链接可能已失效");
+            }
+          } catch (e: any) {
+            onToast(e.message ?? "加入失败");
+          }
+          clearInviteFromURL();
         } else {
-          // 清除残留的 URL 参数
           clearInviteFromURL();
         }
       } catch (e: any) {
