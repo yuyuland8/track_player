@@ -3,6 +3,7 @@
   position: relative;
   flex: 0 0 auto;
   width: min(86%, 340px);
+  width: min(86%, 340px, 90cqh);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
 }

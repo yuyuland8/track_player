@@ -49,10 +49,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  width: 100%;
+  min-height: 100%;
 }
 
-/* 固定为一屏移动端画框：页面本身永不滚动、永不被拉长 */
 html,
 body {
   overflow: hidden;
@@ -60,35 +60,65 @@ body {
 }
 
 body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
   font-family: var(--font-primary);
   color: var(--text-500);
-  background: radial-gradient(circle at 50% 30%, #eef4fb 0%, #d9e4f1 100%);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.96) 0%, rgba(232, 242, 252, 0.78) 34%, transparent 62%),
+    linear-gradient(145deg, #d5e3f1 0%, #edf4fa 46%, #cad9e8 100%);
 }
 
-/* 画框恒为 375 × 812 逻辑像素。窗口小于该尺寸时整体等比缩小
-   （--frame-scale 由 main.tsx 计算），保证底部按钮永远完整可见、绝不被裁掉。
-   用 fixed + 居中变换而非 grid 居中：布局盒比窗口高时 grid 会顶到起始边，
-   缩放后依然会溢出底部。 */
+/* 移动端使用真实视口，不再整体缩放文字和触控区。 */
 #root {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  width: 375px;
-  height: 812px;
+  position: relative;
+  isolation: isolate;
+  width: min(390px, 100%);
+  height: min(844px, calc(100vh - 64px));
+  height: min(844px, calc(100dvh - 64px));
   overflow: hidden;
   background: var(--bg-gradient);
-  transform: translate(-50%, -50%) scale(var(--frame-scale, 1));
-  transform-origin: center center;
 }
 
-/* 桌面/路演窗口：给画框加上手机外观 */
+/* 桌面展示：深色金属边框、内侧高光和柔和落影组成手机外壳。 */
 @media (min-width: 460px) {
   #root {
-    border-radius: 38px;
+    border-radius: 48px;
     box-shadow:
-      0 24px 60px rgba(20, 50, 90, 0.22),
-      0 0 0 10px #fff,
-      0 0 0 11px rgba(0, 0, 0, 0.08);
+      0 0 0 1px rgba(255, 255, 255, 0.68),
+      0 0 0 8px #171c27,
+      0 0 0 10px #4b5564,
+      0 30px 80px rgba(23, 42, 67, 0.3),
+      0 8px 24px rgba(23, 42, 67, 0.18);
+  }
+
+  #root::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: 1000;
+    border-radius: 47px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 0 0 1px rgba(12, 28, 48, 0.08);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 459px) {
+  body {
+    display: block;
+    padding: 0;
+    background: var(--bg-gradient);
+  }
+
+  #root {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
   }
 }
 
