@@ -594,7 +594,7 @@ export default function App() {
       />
 
       <CreateSessionModal
-        open={showCreateModal && !session.isRealSession}
+        open={showCreateModal && !session.isRealSession && session.state.phase !== "restoring"}
         onCreate={async (name) => {
           setShowCreateModal(false);
           if (HAS_SUPABASE) {
