@@ -589,15 +589,15 @@ export default function DiskStage({
       data-style={track.style}
       data-playing={isPlaying ? "1" : "0"}
     >
-      <img
-        key={track.id}
-        className={styles.cover}
-        src={track.cover}
-        alt={`${track.title} 封面`}
-      />
-      <div className={styles.diskSpin}>
-        <img className={styles.disk} src={diskImg} alt="唱片跑道" />
+      <div className={styles.coverSpin}>
+        <img
+          key={track.id}
+          className={styles.cover}
+          src={track.cover}
+          alt={`${track.title} 封面`}
+        />
       </div>
+      <img className={styles.disk} src={diskImg} alt="唱片跑道" />
       {track.style === "walk" && (
         <>
           <PaperPlane className={styles.planeA} />

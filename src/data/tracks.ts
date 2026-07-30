@@ -41,7 +41,7 @@ export const TRACKS: TrackMeta[] = [
   {
     id: "star-crossing-night",
     title: "Star Crossing Night",
-    artist: "颜人中 / GALI",
+    artist: "徐明浩 / GALI",
     cover: starCover,
     audioSrc: `${BASE}assets/audio/star-crossing-night.mp3`,
     lyricsSrc: `${BASE}assets/lyrics/star-crossing-night.lrc`,
