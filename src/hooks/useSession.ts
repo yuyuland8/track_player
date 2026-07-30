@@ -68,7 +68,7 @@ export function useSession(onToast: (msg: string) => void) {
                   baseHighFives: 0,
                   isMe: false,
                   isGuest: false,
-                  _online: newFriend.is_online,
+                  _online: true,
                   _onTrack: newFriend.is_on_track,
                 },
               ];
@@ -81,7 +81,7 @@ export function useSession(onToast: (msg: string) => void) {
           setVisibleMembers((prev) =>
             prev.map((m) =>
               m.id === updated.user_id
-                ? { ...m, _online: updated.is_online, _onTrack: updated.is_on_track }
+                ? { ...m, _online: true, _onTrack: updated.is_on_track }
                 : m,
             ),
           );
@@ -215,14 +215,16 @@ export function useSession(onToast: (msg: string) => void) {
     ) => {
       const s = state as { phase: "active"; track: TrackRow };
       if (s.phase !== "active" || !HAS_SUPABASE) return;
-      await updateFriendStatus(s.track.id, friendId, updates);
+      const normalizedUpdates = { ...updates, is_online: true };
+      await updateFriendStatus(s.track.id, friendId, normalizedUpdates);
       setVisibleMembers((prev) =>
         prev.map((friend) =>
           friend.id === friendId
             ? {
                 ...friend,
-                _online: updates.is_online ?? friend._online,
-                _onTrack: updates.is_on_track ?? friend._onTrack,
+                _online: true,
+                _onTrack:
+                  normalizedUpdates.is_on_track ?? friend._onTrack,
               }
             : friend,
         ),

@@ -1,4 +1,4 @@
-/** 好友推歌：Demo 预置数据，进场即有红点 */
+/** 好友推歌演示模板：Demo 使用预设好友，生产模式映射到真实好友 */
 export type Recommend = {
   friendId: string;
   trackId: string;

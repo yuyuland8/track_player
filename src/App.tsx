@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, FileImage, MoreHorizontal, Users } from "lucide-react";
+import { ChevronLeft, FileImage, Users } from "lucide-react";
 import { TRACKS } from "./data/tracks";
 import { BESTIE_ID, FRIENDS, MAX_ON_TRACK, ME, ME_ID } from "./data/friends";
 import { RECOMMENDS, RECOMMEND_BY_FRIEND } from "./data/recommends";
@@ -94,6 +94,15 @@ export default function App() {
   // ---- 名册：真实会话 > 我 + 预设好友 + 现场观众 ----
   const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
   const demoRoster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
+  const recommendByFriend = useMemo(() => {
+    if (!session.isRealSession) return RECOMMEND_BY_FRIEND;
+    return Object.fromEntries(
+      session.visibleMembers.slice(0, RECOMMENDS.length).map((friend, index) => [
+        friend.id,
+        { ...RECOMMENDS[index], friendId: friend.id },
+      ]),
+    );
+  }, [session.isRealSession, session.visibleMembers]);
   const realMe = useMemo<Friend>(() => {
     if (!session.currentUser) return ME;
     return {
@@ -335,7 +344,7 @@ export default function App() {
   };
 
   const handlePlayRecommend = () => {
-    const rec = recFriendId ? RECOMMEND_BY_FRIEND[recFriendId] : undefined;
+    const rec = recFriendId ? recommendByFriend[recFriendId] : undefined;
     if (!rec) return;
     player.selectTrack(rec.trackId);
     showToast(`正在播放 ${byId(rec.friendId).name} 推荐的歌`);
@@ -351,10 +360,9 @@ export default function App() {
       setReinviteIds((prev) =>
         prev.includes(target.id) ? prev : [...prev, target.id],
       );
-      setOnlineIds((prev) => prev.filter((x) => x !== target.id));
       session
         .updateFriendStatus(target.id, {
-          is_online: false,
+          is_online: true,
           is_on_track: false,
         })
         .catch(() => showToast("跑友状态保存失败，请稍后重试"));
@@ -429,14 +437,7 @@ export default function App() {
           <ChevronLeft size={24} strokeWidth={1.8} />
         </button>
         <h1 className={styles.topTitle}>唱片跑道</h1>
-        <button
-          type="button"
-          className={styles.topBtn}
-          aria-label="更多"
-          onClick={() => showToast("这一首，陪你一起跑")}
-        >
-          <MoreHorizontal size={22} strokeWidth={1.8} />
-        </button>
+        <span className={styles.topBtn} aria-hidden="true" />
       </header>
 
       <div className={styles.summaryRow}>
@@ -521,7 +522,7 @@ export default function App() {
         guests={session.isRealSession ? [] : guests}
         onlineIds={
           session.isRealSession
-            ? session.visibleMembers.filter((f) => f._online).map((f) => f.id)
+            ? session.visibleMembers.map((f) => f.id)
             : onlineIds
         }
         onTrackIds={
@@ -541,9 +542,7 @@ export default function App() {
         }}
         onAddGuest={() => setAddGuestOpen(true)}
         onRemoveGuest={(f) => setGuestToRemove(f)}
-        recommendIds={
-          session.isRealSession ? [] : RECOMMENDS.map((r) => r.friendId)
-        }
+        recommendIds={Object.keys(recommendByFriend)}
         readRecIds={readRecIds}
         onOpenRecommend={handleOpenRecommend}
       />
@@ -553,12 +552,12 @@ export default function App() {
         track={
           recFriendId
             ? (TRACKS.find(
-                (t) => t.id === RECOMMEND_BY_FRIEND[recFriendId]?.trackId,
+                (t) => t.id === recommendByFriend[recFriendId]?.trackId,
               ) ?? null)
             : null
         }
         message={
-          recFriendId ? (RECOMMEND_BY_FRIEND[recFriendId]?.message ?? "") : ""
+          recFriendId ? (recommendByFriend[recFriendId]?.message ?? "") : ""
         }
         onPlay={handlePlayRecommend}
         onClose={() => setRecFriendId(null)}
@@ -572,7 +571,11 @@ export default function App() {
 
       <FriendCard
         friend={cardFriend}
-        online={cardFriend ? onlineIds.includes(cardFriend.id) : false}
+        online={
+          cardFriend
+            ? session.isRealSession || onlineIds.includes(cardFriend.id)
+            : false
+        }
         onTrack={
           cardFriend
             ? onTrackIds.includes(cardFriend.id) &&
