@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>唱片跑道 · 限定播放室</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; font-family:"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,#c9e2f9 0%,#e2f0fc 55%,#f2f9ff 100%); }
+  .phone { max-width:480px; height:100dvh; margin:0 auto; display:flex; flex-direction:column; padding:12px 18px 8px; }
+  .topbar { text-align:center; padding:4px 0 6px; }
+  .topbar span { background:rgba(255,255,255,.75); color:#57708c; font-size:13px; border-radius:16px; padding:6px 18px; }
+  .stage { position:relative; flex:1 1 auto; min-height:0; }
+  canvas#disc { position:absolute; inset:0; width:100%; height:100%; touch-action:manipulation; }
+  .toast { position:absolute; left:50%; bottom:6px; transform:translateX(-50%); background:rgba(255,255,255,.92); color:#4f79e8;
+    font-size:13px; padding:6px 16px; border-radius:15px; opacity:0; transition:opacity .35s; pointer-events:none; white-space:nowrap; box-shadow:0 4px 14px rgba(90,130,180,.18); }
+  .toast.show { opacity:1; }
+
+  .ui { flex:0 0 auto; padding-top:4px; }
+  .status { text-align:center; margin-bottom:10px; }
+  .status span { background:rgba(255,255,255,.85); color:#4f79e8; font-weight:700; font-size:14px; padding:7px 20px; border-radius:18px; }
+  .title { font-size:24px; font-weight:800; color:#1c2430; }
+  .artist { color:#3a4350; font-size:15px; margin-top:4px; }
+  .bar { margin-top:12px; height:4px; background:#c9d6e2; border-radius:2px; }
+  .bar .fill { height:100%; width:15%; background:#4a5568; border-radius:2px; position:relative; }
+  .bar .fill::after { content:""; position:absolute; right:-6px; top:50%; transform:translateY(-50%); width:12px; height:12px; border-radius:50%; background:#1c2430; }
+  .times { display:flex; justify-content:space-between; color:#7a8494; font-size:12px; margin-top:6px; }
+
+  .bpmRow { display:flex; align-items:center; gap:12px; margin-top:12px; color:#3a4350; font-size:14px; }
+  .bpmRow input { flex:1; accent-color:#4f79e8; }
+  .bpmRow b { min-width:34px; text-align:right; }
+  .chips { display:flex; gap:8px; margin-top:10px; }
+  .chip { border:1.6px solid #c9d6e2; background:rgba(255,255,255,.7); color:#7a8494; font-size:13px; border-radius:17px; padding:7px 18px; cursor:pointer; }
+  .chip.on { border-color:#4f79e8; color:#4f79e8; font-weight:700; }
+  .controls { display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:10px; }
+  .pill { background:rgba(255,255,255,.8); border:1.6px dashed #4f79e8; color:#4f79e8; font-size:13px; border-radius:20px; padding:9px 16px; cursor:pointer; white-space:nowrap; }
+  .play { width:54px; height:54px; border-radius:50%; background:#4f79e8; border:none; cursor:pointer; font-size:18px; color:#fff; flex:0 0 auto; }
+  .foot { text-align:center; color:#8fa4bb; font-size:10px; letter-spacing:4px; padding:8px 0 4px; }
+
+  .modal { position:fixed; inset:0; background:rgba(20,30,45,.6); display:none; align-items:center; justify-content:center; z-index:50; flex-direction:column; gap:14px; }
+  .modal.show { display:flex; }
+  .modal img { width:min(74vw,330px); border-radius:18px; box-shadow:0 20px 60px rgba(10,25,50,.5); }
+  .modal .row { display:flex; gap:10px; }
+  .modal button, .modal a { background:#fff; border:none; color:#4f79e8; border-radius:18px; padding:9px 20px; font-size:13px; cursor:pointer; text-decoration:none; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar"><span>你的唱片跑道 · 本周 3 位好友陪跑</span></div>
+
+  <div class="stage">
+    <canvas id="disc"></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="ui">
+    <div class="status"><span id="statusTxt">128 BPM · 全员小跑中</span></div>
+    <div class="title">Runaway Baby</div>
+    <div class="artist">Bruno Mars</div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="times"><span id="tCur">00:22</span><span>03:45</span></div>
+    <div class="bpmRow">BPM <input type="range" id="bpm" min="60" max="190" value="128"><b id="bpmVal">128</b></div>
+    <div class="chips">
+      <button class="chip" data-bpm="80">慢跑</button>
+      <button class="chip on" data-bpm="128">快跑</button>
+      <button class="chip" data-bpm="175">冲刺</button>
+    </div>
+    <div class="controls">
+      <button class="pill" id="btnInvite">邀请好友上唱片</button>
+      <button class="play" id="btnPlay">❚❚</button>
+      <button class="pill" id="btnCard">生成陪跑卡</button>
+    </div>
+  </div>
+  <div class="foot">RUN ON THE RECORD · 限定播放室 No.01</div>
+</div>
+
+<div class="modal" id="modal">
+  <img id="cardImg" alt="陪跑卡">
+  <div class="row">
+    <a id="cardSave" download="本周陪跑卡.png">保存图片</a>
+    <button id="cardClose">关闭</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const cv = document.getElementById('disc');
+  const ctx = cv.getContext('2d');
+  const stage = cv.parentElement;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0, CX = 0, CY = 0, R = 0;
+
+  function resize() {
+    W = stage.clientWidth; H = stage.clientHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    CX = W / 2; CY = H / 2;
+    R = Math.min(W, H) / 2 - 46;         // 唱片半径（留出名牌空间）
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- 状态 ----------
+  let bpm = 128, playing = true;
+  let discRot = 0;                        // 唱片自转角
+  const runners = [
+    { name: '你',   color: '#4f79e8', angle: -1.2, base: 1.00, phase: 0, crown: true },
+    { name: '阿杰', color: '#7b61e0', angle:  0.6, base: 0.90, phase: 2, crown: false },
+    { name: '小笛', color: '#4fae7e', angle:  2.6, base: 0.78, phase: 4, crown: false, leaving: true },
+  ];
+  let events = [];                        // {angle, t, text}
+  const cooldown = {};                    // 击掌冷却
+
+  // ---------- 绘制小人 ----------
+  function drawRunner(rn, speedK) {
+    const trackR = R * 0.92;
+    const x = CX + trackR * Math.cos(rn.angle);
+    const y = CY + trackR * Math.sin(rn.angle);
+    const swing = Math.sin(rn.phase) * Math.min(1, speedK);   // 腿摆
+    const s = R / 210;                                        // 整体缩放
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rn.angle + Math.PI / 2);                       // 切向朝前
+    ctx.scale(s, s);
+
+    // 影子
+    ctx.fillStyle = 'rgba(30,50,80,.12)';
+    ctx.beginPath(); ctx.ellipse(0, 30, 22, 6, 0, 0, 7); ctx.fill();
+    // 动作线
+    if (speedK > 0.55) {
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath(); ctx.moveTo(-30 - i * 4, -12 + i * 10); ctx.lineTo(-46 - i * 6, -12 + i * 10); ctx.stroke();
+      }
+    }
+    // 腿
+    ctx.strokeStyle = '#3f4a5a'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-3, 8); ctx.lineTo(-14 - swing * 10, 28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, 9); ctx.lineTo(12 + swing * 9, 17); ctx.lineTo(16 + swing * 11, 29); ctx.stroke();
+    // 身体
+    ctx.save(); ctx.rotate(0.14);
+    ctx.fillStyle = rn.color;
+    rrect(ctx, -12, -22, 24, 34, 12); ctx.fill();
+    ctx.restore();
+    // 手臂
+    ctx.strokeStyle = rn.color; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(1, -8); ctx.lineTo(15 + swing * 7, -15); ctx.stroke();
+    // 头
+    ctx.fillStyle = '#f2c096';
+    ctx.beginPath(); ctx.arc(9, -34, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = '#4a3a30';
+    ctx.beginPath(); ctx.arc(6, -38, 12, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+    // 皇冠
+    if (rn.crown) {
+      ctx.fillStyle = '#f5b731';
+      ctx.beginPath();
+      ctx.moveTo(0, -48); ctx.lineTo(0, -58); ctx.lineTo(6, -52); ctx.lineTo(10, -60);
+      ctx.lineTo(14, -52); ctx.lineTo(20, -58); ctx.lineTo(20, -48); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    // 名牌（正立，放在唱片外圈）
+    const tagR = R + 26;
+    const tx = CX + tagR * Math.cos(rn.angle);
+    const ty = CY + tagR * Math.sin(rn.angle);
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.fillStyle = 'rgba(95,102,114,.92)';
+    const tw = rn.name.length * 15 + 22;
+    rrect(ctx, -tw / 2, -15, tw, 30, 10); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '700 15px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(rn.name, 0, 1);
+    if (rn.leaving) {
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      rrect(ctx, -76, 20, 152, 24, 8); ctx.fill();
+      ctx.fillStyle = '#e0703c'; ctx.font = '11px sans-serif';
+      ctx.fillText('2天没同听，快要下车了…', 0, 32);
+    }
+    ctx.restore();
+  }
+
+  function rrect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  // ---------- 绘制唱片 ----------
+  function drawDisc() {
+    // 盘体
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.fillStyle = 'rgba(255,255,255,.62)';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+    // 纹路
+    ctx.strokeStyle = 'rgba(195,216,234,.55)'; ctx.lineWidth = 1.4;
+    for (let r = R * .40; r < R * .60; r += R * .04) {
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.stroke();
+    }
+    // 跑道线（随唱片转）
+    ctx.rotate(discRot);
+    ctx.strokeStyle = 'rgba(255,255,255,.95)';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(0, 0, R * .80, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, R * .99, 0, 7); ctx.stroke();
+    ctx.setLineDash([12, 16]);
+    ctx.beginPath(); ctx.arc(0, 0, R * .895, 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+    // 黄标
+    const lg = ctx.createRadialGradient(-R * .1, -R * .12, R * .05, 0, 0, R * .5);
+    lg.addColorStop(0, '#f9c94a'); lg.addColorStop(1, '#f0b429');
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.arc(0, 0, R * .5, 0, 7); ctx.fill();
+    // 奶油纹
+    ctx.fillStyle = 'rgba(253,243,208,.95)';
+    ctx.beginPath();
+    ctx.ellipse(-R * .08, -R * .1, R * .3, R * .2, -0.4, 0, 7); ctx.fill();
+    ctx.rotate(-0.22);
+    ctx.fillStyle = '#ffffff'; ctx.font = `700 ${R * .085}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('BRUNO MARS', 0, R * .3);
+    ctx.fillStyle = '#fdf3d0'; ctx.font = `${R * .05}px sans-serif`;
+    ctx.fillText('doo-wops & hooligans', 0, R * .38);
+    ctx.restore();
+    // 中心孔
+    ctx.fillStyle = '#6b6f76';
+    ctx.beginPath(); ctx.arc(CX, CY, 5, 0, 7); ctx.fill();
+  }
+
+  // ---------- 事件 ----------
+  function angDiff(a, b) {
+    let d = Math.abs(a - b) % (Math.PI * 2);
+    return d > Math.PI ? Math.PI * 2 - d : d;
+  }
+  function checkEvents() {
+    for (let i = 0; i < runners.length; i++) {
+      for (let j = i + 1; j < runners.length; j++) {
+        const key = i + '-' + j;
+        if (angDiff(runners[i].angle, runners[j].angle) < 0.14) {
+          if (!cooldown[key] || performance.now() - cooldown[key] > 6000) {
+            cooldown[key] = performance.now();
+            const mid = (runners[i].angle + runners[j].angle) / 2;
+            events.push({ angle: mid, t: 1.4, text: '击掌！' });
+            toast(`${runners[i].name} 和 ${runners[j].name} 击掌了 ✋`);
+          }
+        }
+      }
+    }
+  }
+  function drawEvents(dt) {
+    events.forEach(ev => {
+      ev.t -= dt;
+      const er = R + 52;
+      const x = CX + er * Math.cos(ev.angle), y = CY + er * Math.sin(ev.angle);
+      const a = Math.min(1, ev.t / 1.4 + .2);
+      ctx.save(); ctx.translate(x, y); ctx.globalAlpha = a;
+      ctx.fillStyle = '#f5b731';
+      star(ctx, 0, -10, 11);
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      rrect(ctx, -34, 4, 68, 24, 9); ctx.fill();
+      ctx.fillStyle = '#e8912d'; ctx.font = '700 14px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(ev.text, 0, 17);
+      ctx.restore();
+    });
+    events = events.filter(ev => ev.t > 0);
+  }
+  function star(c, x, y, r) {
+    c.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rr = i % 2 ? r * .45 : r;
+      const a = -Math.PI / 2 + i * Math.PI / 5;
+      c[i ? 'lineTo' : 'moveTo'](x + rr * Math.cos(a), y + rr * Math.sin(a));
+    }
+    c.closePath(); c.fill();
+  }
+
+  // ---------- 主循环 ----------
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - last) / 1000, .05); last = now;
+    const speedK = bpm / 128;
+    if (playing) {
+      discRot += dt * speedK * 0.55;
+      runners.forEach(rn => {
+        rn.angle += dt * speedK * rn.base * 0.5;
+        rn.phase += dt * (bpm / 60) * Math.PI * 1.6;
+      });
+      checkEvents();
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawDisc();
+    runners.forEach(rn => drawRunner(rn, speedK));
+    drawEvents(playing ? dt : 0);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- 点击小人 ----------
+  cv.addEventListener('click', e => {
+    const rect = cv.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    for (const rn of runners) {
+      const trackR = R * 0.92;
+      const x = CX + trackR * Math.cos(rn.angle), y = CY + trackR * Math.sin(rn.angle);
+      if ((mx - x) ** 2 + (my - y) ** 2 < 42 ** 2) {
+        const msgs = {
+          '你': '本周你已陪 3 位好友跑了 42 圈',
+          '阿杰': '阿杰 本周和你同听 5 首歌，最爱这首',
+          '小笛': '小笛 2 天没和你同听了，发首歌叫她回来吧',
+        };
+        toast(msgs[rn.name]); return;
+      }
+    }
+  });
+
+  // ---------- Toast ----------
+  const toastEl = document.getElementById('toast');
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+  }
+
+  // ---------- BPM 控制 ----------
+  const bpmInput = document.getElementById('bpm'), bpmVal = document.getElementById('bpmVal');
+  const statusTxt = document.getElementById('statusTxt');
+  const chips = [...document.querySelectorAll('.chip')];
+  function setBpm(v) {
+    bpm = +v; bpmInput.value = v; bpmVal.textContent = v;
+    const label = bpm < 100 ? '全员散步中' : bpm < 150 ? '全员小跑中' : '全员冲刺中！';
+    statusTxt.textContent = `${bpm} BPM · ${label}`;
+    chips.forEach(c => c.classList.toggle('on', +c.dataset.bpm === bpm));
+  }
+  bpmInput.addEventListener('input', e => setBpm(e.target.value));
+  chips.forEach(c => c.addEventListener('click', () => setBpm(c.dataset.bpm)));
+
+  // ---------- 播放 / 进度 ----------
+  const btnPlay = document.getElementById('btnPlay');
+  const fill = document.getElementById('fill'), tCur = document.getElementById('tCur');
+  const DUR = 225; let cur = 22;
+  btnPlay.addEventListener('click', () => { playing = !playing; btnPlay.textContent = playing ? '❚❚' : '▶'; });
+  setInterval(() => {
+    if (!playing) return;
+    cur = (cur + 1) % DUR;
+    fill.style.width = (cur / DUR * 100) + '%';
+    tCur.textContent = `0${Math.floor(cur / 60)}:${String(cur % 60).padStart(2, '0')}`;
+  }, 1000);
+
+  // ---------- 邀请好友 ----------
+  document.getElementById('btnInvite').addEventListener('click', () =>
+    toast('已生成邀请链接：朋友点开就能跳上你的唱片 🏃'));
+
+  // ---------- 生成陪跑卡 ----------
+  const modal = document.getElementById('modal');
+  document.getElementById('btnCard').addEventListener('click', () => {
+    const cw = 720, ch = 1080, c2 = document.createElement('canvas');
+    c2.width = cw; c2.height = ch;
+    const c = c2.getContext('2d');
+    const g = c.createLinearGradient(0, 0, 0, ch);
+    g.addColorStop(0, '#c9e2f9'); g.addColorStop(1, '#f2f9ff');
+    c.fillStyle = g; c.fillRect(0, 0, cw, ch);
+    // 唱片快照（取正方形中心区域）
+    const side = Math.min(W, H) * DPR;
+    const sx = (cv.width - side) / 2, sy = (cv.height - side) / 2;
+    c.drawImage(cv, sx, sy, side, side, 60, 120, 600, 600);
+    c.fillStyle = '#1c2430'; c.font = '800 46px "PingFang SC", sans-serif';
+    c.textAlign = 'center';
+    c.fillText('本周，有 3 位好友在我的唱片上陪跑', cw / 2, 810);
+    c.fillStyle = '#4f79e8'; c.font = '700 30px "PingFang SC", sans-serif';
+    c.fillText(`Runaway Baby · Bruno Mars · ${bpm} BPM`, cw / 2, 866);
+    c.fillStyle = '#7a8494'; c.font = '24px "PingFang SC", sans-serif';
+    c.fillText('和阿杰击掌 3 次 · 陪小笛跑了 12 圈', cw / 2, 912);
+    c.fillText('2026.07.29', cw / 2, 950);
+    c.fillStyle = '#8fa4bb'; c.font = '20px sans-serif';
+    c.fillText('RUN ON THE RECORD · 限定播放室 No.01', cw / 2, 1020);
+    const url = c2.toDataURL('image/png');
+    document.getElementById('cardImg').src = url;
+    document.getElementById('cardSave').href = url;
+    modal.classList.add('show');
+  });
+  document.getElementById('cardClose').addEventListener('click', () => modal.classList.remove('show'));
+
+  setBpm(128);
+})();
+</script>
+</body>
+</html>
