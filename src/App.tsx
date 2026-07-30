@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, FileImage, MoreHorizontal, Users } from "lucide-react";
 import { TRACKS } from "./data/tracks";
-import {
-  BESTIE_ID,
-  FRIENDS,
-  MAX_ON_TRACK,
-  ME,
-  ME_ID,
-  friendById,
-} from "./data/friends";
+import { BESTIE_ID, FRIENDS, MAX_ON_TRACK, ME, ME_ID } from "./data/friends";
 import { parseLrc } from "./utils/lrc";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useToasts } from "./hooks/useToasts";
+import { useGuests } from "./hooks/useGuests";
 import DiskStage from "./components/DiskStage";
 import Lyrics from "./components/Lyrics";
 import ProgressBar from "./components/ProgressBar";
@@ -20,6 +14,8 @@ import FriendPanel from "./components/FriendPanel";
 import FriendCard from "./components/FriendCard";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ReportModal, { type ReportData } from "./components/ReportModal";
+import AddGuestModal from "./components/AddGuestModal";
+import InviteModal from "./components/InviteModal";
 import type { Friend, LyricLine } from "./types";
 import styles from "./App.module.css";
 
@@ -67,23 +63,36 @@ export default function App() {
     };
   }, [player.track, lyricsMap, lyricsFailed, showToast]);
 
+  // ---- 名册：我 + 预设好友 + 现场观众（观众持久化在 localStorage）----
+  const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
+  const roster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
+  const byId = useCallback(
+    (id: string): Friend => roster.find((f) => f.id === id) ?? ME,
+    [roster],
+  );
+
   // ---- 陪跑名单 ----
   const [companionOn, setCompanionOn] = useState(true);
-  const [onlineIds, setOnlineIds] = useState<string[]>([
+  // 存过的现场观众回来时仍然在线、并优先占据跑道名额（最近加入的排前面）
+  const [onlineIds, setOnlineIds] = useState<string[]>(() => [
+    ...guests.map((g) => g.id),
     "ajie",
     "momo",
     "tang",
     "yuyu",
   ]);
-  const [onTrackIds, setOnTrackIds] = useState<string[]>([
-    ME_ID,
-    "ajie",
-    "momo",
-    "tang",
-  ]);
+  const [onTrackIds, setOnTrackIds] = useState<string[]>(() =>
+    [
+      ME_ID,
+      ...guests.map((g) => g.id).reverse(),
+      "ajie",
+      "momo",
+      "tang",
+    ].slice(0, MAX_ON_TRACK),
+  );
   const [exitingIds, setExitingIds] = useState<string[]>([]);
 
-  const runners = useMemo(() => onTrackIds.map(friendById), [onTrackIds]);
+  const runners = useMemo(() => onTrackIds.map(byId), [onTrackIds, byId]);
   const trackFull = onTrackIds.length >= MAX_ON_TRACK;
 
   const leaveTrack = useCallback((id: string) => {
@@ -106,10 +115,10 @@ export default function App() {
         return merged;
       });
       if (!silent && ids.length === 1) {
-        showToast(`${friendById(ids[0]).name}来陪你了`);
+        showToast(`${byId(ids[0]).name}来陪你了`);
       }
     },
-    [showToast],
+    [showToast, byId],
   );
 
   const handleToggleCompanion = () => {
@@ -132,23 +141,45 @@ export default function App() {
     }
   };
 
+  /** 在线开关：只管在线状态；下线必然退出跑道（离线不可能在跑道上） */
   const handleToggleOnline = (id: string, online: boolean) => {
-    const friend = friendById(id);
+    const friend = byId(id);
     if (online) {
-      if (companionOn && !onTrackIds.includes(id) && trackFull) {
-        showToast("跑道已满，最多 8 人");
-        return;
-      }
       setOnlineIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-      if (companionOn && !exitingIds.includes(id)) {
-        joinTrack([id]);
-      }
+      showToast(`${friend.name}上线了`);
     } else {
       setOnlineIds((prev) => prev.filter((x) => x !== id));
       if (onTrackIds.includes(id) && !exitingIds.includes(id)) {
         leaveTrack(id);
         showToast(`${friend.name}下线了，正在跑出跑道`);
+      } else {
+        showToast(`${friend.name}已离线`);
       }
+    }
+  };
+
+  /** 跑道开关：只对在线好友生效，受 8 人上限约束 */
+  const handleToggleTrack = (id: string, onTrack: boolean) => {
+    const friend = byId(id);
+    if (onTrack) {
+      if (!onlineIds.includes(id)) {
+        showToast(`${friend.name}还没上线，先打开在线开关`);
+        return;
+      }
+      if (!companionOn) {
+        showToast("请先打开「陪跑」开关");
+        return;
+      }
+      if (trackFull) {
+        showToast("跑道已满，最多 8 人");
+        return;
+      }
+      if (exitingIds.includes(id)) return;
+      joinTrack([id]);
+    } else {
+      if (!onTrackIds.includes(id) || exitingIds.includes(id)) return;
+      leaveTrack(id);
+      showToast(`${friend.name}下跑道了，仍然在线`);
     }
   };
 
@@ -157,7 +188,11 @@ export default function App() {
     setCompanionOn(true);
     setOnlineIds((prev) => Array.from(new Set([...prev, ...targets])));
     const toLeave = onTrackIds.filter(
-      (id) => id !== ME_ID && !targets.includes(id) && !exitingIds.includes(id),
+      (id) =>
+        id !== ME_ID &&
+        !targets.includes(id) &&
+        !byId(id).isGuest &&
+        !exitingIds.includes(id),
     );
     toLeave.forEach((id, i) => {
       window.setTimeout(() => leaveTrack(id), i * 120);
@@ -173,15 +208,29 @@ export default function App() {
   const [sessionLaps, setSessionLaps] = useState(0);
   const [fivesWith, setFivesWith] = useState<Record<string, number>>({});
 
-  const handleHighFive = useCallback((a: Friend, b: Friend) => {
-    setFivesWith((prev) => {
-      const next = { ...prev };
+  const handleHighFive = useCallback(
+    (a: Friend, b: Friend) => {
+      setFivesWith((prev) => {
+        const next = { ...prev };
+        for (const f of [a, b]) {
+          if (!f.isMe && !f.isGuest) next[f.id] = (next[f.id] ?? 0) + 1;
+        }
+        return next;
+      });
+      // 观众的击掌次数直接累加到 localStorage，下次来还看得到
       for (const f of [a, b]) {
-        if (!f.isMe) next[f.id] = (next[f.id] ?? 0) + 1;
+        if (f.isGuest) recordHighFive(f.id);
       }
-      return next;
-    });
-  }, []);
+    },
+    [recordHighFive],
+  );
+
+  /** 观众的次数取持久化值，预设好友取基础值 + 本次会话增量 */
+  const fivesFor = useCallback(
+    (f: Friend) =>
+      f.isGuest ? f.baseHighFives : f.baseHighFives + (fivesWith[f.id] ?? 0),
+    [fivesWith],
+  );
 
   const handleLap = useCallback(() => setSessionLaps((v) => v + 1), []);
   const handleRelay = useCallback(() => {}, []);
@@ -194,7 +243,10 @@ export default function App() {
   const [cardFriendId, setCardFriendId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [addGuestOpen, setAddGuestOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<Friend | null>(null);
+  const [guestToRemove, setGuestToRemove] = useState<Friend | null>(null);
 
   const handleRunnerClick = useCallback(
     (f: Friend) => {
@@ -207,6 +259,46 @@ export default function App() {
     [showToast],
   );
 
+  const handleAddGuest = (name: string, color: string, relation: string) => {
+    const guest = addGuest(name, color, relation);
+    setAddGuestOpen(false);
+    setCompanionOn(true);
+    setOnlineIds((prev) => [...prev, guest.id]);
+
+    // 满员时让最后一位预设好友让位，保证现场观众一定能上跑道
+    if (onTrackIds.length >= MAX_ON_TRACK) {
+      const yielder = [...onTrackIds]
+        .reverse()
+        .find((id) => id !== ME_ID && !byId(id).isGuest && !exitingIds.includes(id));
+      if (!yielder) {
+        showToast(`跑道已满，${guest.name}先在场边等一会儿`);
+        return;
+      }
+      leaveTrack(yielder);
+      showToast(`${byId(yielder).name}让位，${guest.name}上跑道啦`);
+      window.setTimeout(() => joinTrack([guest.id], true), 700);
+      return;
+    }
+    joinTrack([guest.id], true);
+    showToast(`${guest.name}上跑道啦，去跑道上找找`);
+  };
+
+  const handleRemoveGuestConfirm = () => {
+    if (!guestToRemove) return;
+    const { id, name } = guestToRemove;
+    setOnlineIds((prev) => prev.filter((x) => x !== id));
+    if (onTrackIds.includes(id)) {
+      // 先退场再删除记录，避免动画途中数据被抽走
+      leaveTrack(id);
+      window.setTimeout(() => removeGuest(id), 1000);
+    } else {
+      removeGuest(id);
+    }
+    if (cardFriendId === id) setCardFriendId(null);
+    showToast(`已删除观众 ${name}`);
+    setGuestToRemove(null);
+  };
+
   const handleKickConfirm = () => {
     if (!kickTarget) return;
     leaveTrack(kickTarget.id);
@@ -216,15 +308,15 @@ export default function App() {
     setCardFriendId(null);
   };
 
-  const cardFriend = cardFriendId ? friendById(cardFriendId) : null;
+  const cardFriend = cardFriendId ? byId(cardFriendId) : null;
 
   const reportData: ReportData = useMemo(() => {
-    const bestie = friendById(BESTIE_ID);
+    const bestie = byId(BESTIE_ID);
     return {
       friendCount: Math.max(onTrackIds.length - 1, 0),
       minutes: weeklyMinutes,
       laps: totalLaps,
-      fives: bestie.baseHighFives + (fivesWith[BESTIE_ID] ?? 0),
+      fives: fivesFor(bestie),
       fiveName: bestie.name,
       trackTitle: player.track.title,
       coverSrc: player.track.cover,
@@ -251,7 +343,7 @@ export default function App() {
           type="button"
           className={styles.topBtn}
           aria-label="更多"
-          onClick={() => showToast("这一程，有人陪你跑")}
+          onClick={() => showToast("这一首，陪你一起跑")}
         >
           <MoreHorizontal size={22} strokeWidth={1.8} />
         </button>
@@ -263,19 +355,21 @@ export default function App() {
         </span>
       </div>
 
-      <DiskStage
-        track={player.track}
-        audioRef={player.audioRef}
-        isPlaying={player.isPlaying}
-        runners={runners}
-        exitingIds={exitingIds}
-        reducedMotion={reducedMotion}
-        onExitDone={handleExitDone}
-        onHighFive={handleHighFive}
-        onLap={handleLap}
-        onRelay={handleRelay}
-        onRunnerClick={handleRunnerClick}
-      />
+      <div className={styles.stageWrap}>
+        <DiskStage
+          track={player.track}
+          audioRef={player.audioRef}
+          isPlaying={player.isPlaying}
+          runners={runners}
+          exitingIds={exitingIds}
+          reducedMotion={reducedMotion}
+          onExitDone={handleExitDone}
+          onHighFive={handleHighFive}
+          onLap={handleLap}
+          onRelay={handleRelay}
+          onRunnerClick={handleRunnerClick}
+        />
+      </div>
 
       <Lyrics
         lyrics={lyrics}
@@ -338,11 +432,32 @@ export default function App() {
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         friends={FRIENDS}
+        guests={guests}
         onlineIds={onlineIds}
         onTrackIds={onTrackIds}
         trackFull={trackFull}
         onToggleOnline={handleToggleOnline}
+        onToggleTrack={handleToggleTrack}
         onPreset={handlePreset}
+        onInvite={() => setInviteOpen(true)}
+        onAddGuest={() => setAddGuestOpen(true)}
+        onRemoveGuest={(f) => setGuestToRemove(f)}
+      />
+
+      <AddGuestModal
+        open={addGuestOpen}
+        onClose={() => setAddGuestOpen(false)}
+        onSubmit={handleAddGuest}
+      />
+
+      <InviteModal
+        open={inviteOpen}
+        trackTitle={player.track.title}
+        artist={player.track.artist}
+        coverSrc={player.track.cover}
+        friendCount={Math.max(onTrackIds.length - 1, 0)}
+        onClose={() => setInviteOpen(false)}
+        onToast={showToast}
       />
 
       <FriendCard
@@ -361,11 +476,7 @@ export default function App() {
             : 0
         }
         laps={cardFriend ? cardFriend.baseLaps + sessionLaps : 0}
-        fives={
-          cardFriend
-            ? cardFriend.baseHighFives + (fivesWith[cardFriend.id] ?? 0)
-            : 0
-        }
+        fives={cardFriend ? fivesFor(cardFriend) : 0}
         onKick={(f) => setKickTarget(f)}
         onClose={() => setCardFriendId(null)}
       />
@@ -377,6 +488,15 @@ export default function App() {
         confirmText="确认请离"
         onConfirm={handleKickConfirm}
         onCancel={() => setKickTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={guestToRemove !== null}
+        title={`删除观众 ${guestToRemove?.name ?? ""}？`}
+        description="TA 会跑出跑道，本机保存的陪跑记录也会一起清掉。"
+        confirmText="确认删除"
+        onConfirm={handleRemoveGuestConfirm}
+        onCancel={() => setGuestToRemove(null)}
       />
 
       <ReportModal

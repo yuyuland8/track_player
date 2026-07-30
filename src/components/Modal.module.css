@@ -1,5 +1,6 @@
+/* absolute 而非 fixed：浮层被限制在 #root 这台「手机」里，桌面画框下不会溢出 */
 .mask {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(13, 32, 51, 0.42);
   z-index: 200;

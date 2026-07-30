@@ -49,25 +49,48 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
-html {
-  overflow-x: hidden;
+/* 固定为一屏移动端画框：页面本身永不滚动、永不被拉长 */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   font-family: var(--font-primary);
   color: var(--text-500);
   background: #dceafd;
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
 }
 
 #root {
-  max-width: 430px;
+  position: relative; /* 作为遮罩/抽屉/Toast 的定位参照，使浮层被裁剪在画框内 */
+  width: min(100vw, 430px);
+  height: 100dvh;
   margin: 0 auto;
-  min-height: 100dvh;
+  overflow: hidden;
   background: var(--bg-gradient);
+}
+
+/* 桌面/路演大窗口：居中成一台手机的样子，不再留大片空白 */
+@media (min-width: 520px) and (min-height: 720px) {
+  body {
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 50% 30%, #eef4fb 0%, #d9e4f1 100%);
+  }
+
+  #root {
+    width: 390px;
+    height: 844px;
+    border-radius: 38px;
+    box-shadow:
+      0 24px 60px rgba(20, 50, 90, 0.22),
+      0 0 0 10px #fff,
+      0 0 0 11px rgba(0, 0, 0, 0.08);
+  }
 }
 
 button {

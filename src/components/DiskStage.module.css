@@ -1,6 +1,8 @@
+/* 始终保持正方形：同时受宽度和视口高度约束，短窗口下等比缩小而不压扁 */
 .stage {
   position: relative;
-  width: min(82%, 330px);
+  flex: 0 0 auto;
+  width: min(86%, 340px, 40dvh);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
 }

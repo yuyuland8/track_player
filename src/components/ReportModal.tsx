@@ -165,7 +165,7 @@ async function renderReport(data: ReportData): Promise<string> {
   // 标语
   ctx.fillStyle = "#169AF3";
   ctx.font = font(600, 44);
-  ctx.fillText("这一程，有人陪你跑", W / 2, 1800);
+  ctx.fillText("这一首，陪你一起跑", W / 2, 1800);
 
   return canvas.toDataURL("image/png");
 }

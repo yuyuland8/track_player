@@ -48,7 +48,9 @@ export default function FriendCard({
                 </span>
               </div>
               <span className={styles.relation}>
-                跑友 · 认识 {friend.relationDays} 天
+                {friend.relationLabel
+                  ? `跑友 · ${friend.relationLabel}`
+                  : `跑友 · 认识 ${friend.relationDays} 天`}
               </span>
             </div>
           </div>

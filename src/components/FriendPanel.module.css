@@ -28,10 +28,49 @@
 }
 
 .hint {
-  margin: 0 0 var(--space-400);
+  margin: 0 0 var(--space-300);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 17px;
   color: var(--text-300);
+}
+
+/* 添加观众 / 邀请 */
+.actions {
+  display: flex;
+  gap: var(--space-200);
+  margin-bottom: var(--space-300);
+}
+
+.actionMain,
+.actionGhost {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--corner-round);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.actionMain {
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(22, 154, 243, 0.3);
+}
+
+.actionGhost {
+  background: var(--brand-10);
+  color: var(--brand-600);
+}
+
+.actionMain:active {
+  transform: scale(0.98);
+}
+
+.actionGhost:active {
+  background: rgba(22, 154, 243, 0.18);
 }
 
 .presets {
@@ -42,9 +81,9 @@
 
 .preset {
   flex: 1;
-  min-height: 52px;
+  min-height: 48px;
   border-radius: var(--corner-s);
-  background: var(--brand-10);
+  background: rgba(201, 229, 253, 0.4);
   color: var(--brand-600);
   font-size: 13px;
   font-weight: 600;
@@ -72,6 +111,23 @@
   color: var(--red-heart);
 }
 
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-200);
+  margin: var(--space-400) 0 var(--space-100);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--text-400);
+}
+
+.sectionNote {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-200);
+}
+
 .list {
   list-style: none;
   margin: 0;
@@ -81,8 +137,8 @@
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-300);
-  min-height: 52px;
+  gap: var(--space-200);
+  min-height: 56px;
   border-bottom: 1px solid var(--divider);
 }
 
@@ -103,39 +159,63 @@
   flex-shrink: 0;
 }
 
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .name {
   font-size: 14px;
   line-height: 19px;
   color: var(--text-500);
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tagOnTrack,
-.tagOnline,
-.tagOffline {
-  font-size: 11px;
-  line-height: 18px;
-  padding: 0 8px;
-  border-radius: var(--corner-round);
+.stateOn,
+.stateOff {
+  font-size: 10px;
+  line-height: 14px;
 }
 
-.tagOnTrack {
-  background: var(--brand-10);
+.stateOn {
   color: var(--brand-600);
+}
+
+.stateOff {
+  color: var(--text-200);
+}
+
+/* 上/下跑道按钮 */
+.trackBtn {
+  flex-shrink: 0;
+  min-width: 56px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: var(--corner-round);
+  border: 1px solid var(--brand-10);
+  background: rgba(201, 229, 253, 0.35);
+  color: var(--brand-600);
+  font-size: 12px;
   font-weight: 600;
 }
 
-.tagOnline {
-  background: rgba(46, 196, 182, 0.12);
-  color: #14957f;
+.trackBtnOn {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+  color: #fff;
 }
 
-.tagOffline {
-  background: var(--button-mask);
-  color: var(--text-300);
+.trackBtn[aria-disabled="true"] {
+  opacity: 0.35;
 }
 
+/* 在线开关 */
 .switch {
+  flex-shrink: 0;
   width: 46px;
   height: 28px;
   padding: 3px;
@@ -143,7 +223,6 @@
   background: var(--text-100);
   transition: background 0.2s ease-out;
   position: relative;
-  /* 扩大触控区域至 44px */
   margin: 8px 0;
   box-sizing: content-box;
   background-clip: content-box;
@@ -152,10 +231,6 @@
 .switchOn {
   background: var(--brand-600);
   background-clip: content-box;
-}
-
-.switchBlocked {
-  opacity: 0.4;
 }
 
 .thumb {
@@ -173,4 +248,18 @@
 
 .switchOn .thumb {
   left: 24px;
+}
+
+.del {
+  flex-shrink: 0;
+  width: 32px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-200);
+}
+
+.del:active {
+  color: var(--red-heart);
 }

@@ -34,4 +34,8 @@ export type Friend = {
   baseLaps: number;
   baseHighFives: number;
   isMe?: boolean;
+  /** 现场添加的观众，数据存在 localStorage */
+  isGuest?: boolean;
+  /** 覆盖默认的「跑友 · 认识 N 天」关系文案 */
+  relationLabel?: string;
 };
