@@ -139,16 +139,9 @@
   transform-origin: center top;
 }
 
+/* 手臂与腿同色：与队服色的躯干拉开对比，摆动时看得见 */
 .armBack,
-.armFront {
-  fill: var(--suit);
-  filter: brightness(0.86);
-}
-
-.armFront {
-  filter: none;
-}
-
+.armFront,
 .legBack,
 .legFront {
   fill: #3a4256;
