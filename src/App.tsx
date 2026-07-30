@@ -9,6 +9,7 @@ import { useToasts } from "./hooks/useToasts";
 import { useGuests } from "./hooks/useGuests";
 import { useSession } from "./hooks/useSession";
 import { HAS_SUPABASE } from "./lib/supabase";
+import { getUser, getInviteUserIdFromURL } from "./lib/db";
 import DiskStage from "./components/DiskStage";
 import Lyrics from "./components/Lyrics";
 import ProgressBar from "./components/ProgressBar";
@@ -20,8 +21,7 @@ import ReportModal, { type ReportData } from "./components/ReportModal";
 import AddGuestModal from "./components/AddGuestModal";
 import InviteModal from "./components/InviteModal";
 import RecommendModal from "./components/RecommendModal";
-import CreateSessionModal from "./components/CreateSessionModal";
-import JoinSessionModal from "./components/JoinSessionModal";
+import LoginModal from "./components/LoginModal";
 import ShareModal from "./components/ShareModal";
 import type { Friend, LyricLine } from "./types";
 import styles from "./App.module.css";
@@ -75,6 +75,17 @@ export default function App() {
 
   // ---- Demo 模式下首次进入弹窗 ----
   const [showCreateModal, setShowCreateModal] = useState(true);
+
+  // ---- 邀请人名字（URL 带 ?s= 时查询） ----
+  const [inviterName, setInviterName] = useState<string | undefined>();
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    const inviteId = getInviteUserIdFromURL();
+    if (!inviteId) return;
+    getUser(inviteId).then((u) => {
+      if (u) setInviterName(u.name);
+    });
+  }, []);
 
   // ---- 名册：真实会话 > 我 + 预设好友 + 现场观众 ----
   const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
@@ -593,32 +604,23 @@ export default function App() {
         onError={showToast}
       />
 
-      <CreateSessionModal
-        open={showCreateModal && !session.isRealSession && session.state.phase !== "restoring"}
-        onCreate={async (name) => {
-          setShowCreateModal(false);
-          if (HAS_SUPABASE) {
-            await session.handleCreate(name);
-          } else {
-            showToast(`Hello ${name}！Demo 模式已就绪`);
+      <LoginModal
+        open={showCreateModal && !session.isRealSession && HAS_SUPABASE}
+        restoring={session.state.phase === "restoring"}
+        inviteUserName={inviterName}
+        onLogin={async (id, name) => {
+          try {
+            await session.handleLogin(id, name);
+            setShowCreateModal(false);
+          } catch (e: any) {
+            showToast(e.message ?? "登录失败");
           }
         }}
         onSkipDemo={() => {
           setShowCreateModal(false);
         }}
         onClose={() => {
-          setShowCreateModal(false);
-        }}
-      />
-
-      <JoinSessionModal
-        open={session.state.phase === "joining"}
-        shareCode={session.state.phase === "joining" ? session.state.shareCode : ""}
-        onJoin={session.handleJoin}
-        onClose={() => {
-          // 关闭加入弹窗，降级为 demo
-          window.history.replaceState({}, "", window.location.pathname);
-          setShowCreateModal(true);
+          if (session.state.phase !== "restoring") setShowCreateModal(false);
         }}
       />
 
