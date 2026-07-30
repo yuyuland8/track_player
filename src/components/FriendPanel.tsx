@@ -54,7 +54,7 @@ export default function FriendPanel({
     const hasRec = recommendIds.includes(f.id);
     const unread = hasRec && !readRecIds.includes(f.id);
     const canReinvite =
-      !onTrack && (demoMode ? reinviteIds.includes(f.id) : true);
+      !demoMode && !onTrack && reinviteIds.includes(f.id);
 
     return (
       <li key={f.id} className={styles.row}>

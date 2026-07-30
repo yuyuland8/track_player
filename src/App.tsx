@@ -347,12 +347,12 @@ export default function App() {
   const handleKickConfirm = () => {
     if (!kickTarget) return;
     const target = kickTarget;
-    setReinviteIds((prev) =>
-      prev.includes(target.id) ? prev : [...prev, target.id],
-    );
     leaveTrack(target.id);
-    setOnlineIds((prev) => prev.filter((x) => x !== target.id));
     if (session.isRealSession) {
+      setReinviteIds((prev) =>
+        prev.includes(target.id) ? prev : [...prev, target.id],
+      );
+      setOnlineIds((prev) => prev.filter((x) => x !== target.id));
       session
         .updateFriendStatus(target.id, {
           is_online: false,
@@ -594,7 +594,11 @@ export default function App() {
       <ConfirmDialog
         open={kickTarget !== null}
         title={`请${kickTarget?.name ?? ""}离开跑道？`}
-        description="TA 会减速挥手后跑出跑道，之后可以在好友管理里重新上线。"
+        description={
+          session.isRealSession
+            ? "TA 会减速挥手后跑出跑道，之后可以在酷跑团里重新邀请。"
+            : "TA 会减速挥手后跑出跑道，之后可以在好友管理里重新加入。"
+        }
         confirmText="确认请离"
         onConfirm={handleKickConfirm}
         onCancel={() => setKickTarget(null)}
