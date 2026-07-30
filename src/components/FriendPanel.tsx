@@ -1,4 +1,5 @@
-import { Sparkles, Trash2, UserPlus, Users } from "lucide-react";
+import { Mail, MailOpen, Sparkles, Trash2, UserPlus, Users } from "lucide-react";
+import { HAS_TRACK_LIMIT, MAX_ON_TRACK } from "../data/friends";
 import type { Friend } from "../types";
 import Modal from "./Modal";
 import styles from "./FriendPanel.module.css";
@@ -17,6 +18,11 @@ type Props = {
   onInvite: () => void;
   onAddGuest: () => void;
   onRemoveGuest: (f: Friend) => void;
+  /** 有推歌的好友 id */
+  recommendIds: string[];
+  /** 已读推歌的好友 id */
+  readRecIds: string[];
+  onOpenRecommend: (f: Friend) => void;
 };
 
 export default function FriendPanel({
@@ -33,11 +39,16 @@ export default function FriendPanel({
   onInvite,
   onAddGuest,
   onRemoveGuest,
+  recommendIds,
+  readRecIds,
+  onOpenRecommend,
 }: Props) {
   const renderRow = (f: Friend) => {
     const online = onlineIds.includes(f.id);
     const onTrack = onTrackIds.includes(f.id);
     const joinBlocked = !online || (!onTrack && trackFull);
+    const hasRec = recommendIds.includes(f.id);
+    const unread = hasRec && !readRecIds.includes(f.id);
 
     return (
       <li key={f.id} className={styles.row}>
@@ -49,7 +60,24 @@ export default function FriendPanel({
           {f.name.slice(-1)}
         </span>
         <span className={styles.who}>
-          <span className={styles.name}>{f.name}</span>
+          <span className={styles.nameRow}>
+            <span className={styles.name}>{f.name}</span>
+            {hasRec && (
+              <button
+                type="button"
+                className={styles.mail}
+                aria-label={`${f.name} 推荐的歌曲${unread ? "（未读）" : ""}`}
+                onClick={() => onOpenRecommend(f)}
+              >
+                {unread ? (
+                  <Mail size={15} strokeWidth={1.9} />
+                ) : (
+                  <MailOpen size={15} strokeWidth={1.9} />
+                )}
+                {unread && <span className={styles.dot} aria-hidden="true" />}
+              </button>
+            )}
+          </span>
           <span className={online ? styles.stateOn : styles.stateOff}>
             {online ? (onTrack ? "在线 · 在跑道" : "在线 · 未上跑道") : "离线"}
           </span>
@@ -98,7 +126,10 @@ export default function FriendPanel({
         <span className={styles.demoTag}>Demo</span>
       </div>
       <p className={styles.hint}>
-        左边开关控制在线状态，右边「加入」控制是否上跑道。离线会自动退出跑道，跑道最多 8 人（含你自己）。
+        左边开关控制在线状态，右边「加入」控制是否上跑道。离线会自动退出跑道，
+        {HAS_TRACK_LIMIT
+          ? `跑道最多 ${MAX_ON_TRACK} 人（含你自己）。`
+          : "当前不限跑道人数。"}
       </p>
 
       <div className={styles.actions}>
@@ -124,7 +155,9 @@ export default function FriendPanel({
         </button>
       </div>
 
-      {trackFull && <p className={styles.fullTip}>跑道已满，最多 8 人</p>}
+      {trackFull && (
+        <p className={styles.fullTip}>跑道已满，最多 {MAX_ON_TRACK} 人</p>
+      )}
 
       {guests.length > 0 && (
         <>

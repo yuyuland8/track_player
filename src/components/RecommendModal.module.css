@@ -1,0 +1,109 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+}
+
+.from {
+  display: flex;
+  align-items: center;
+  gap: var(--space-200);
+  margin-right: 40px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.fromText {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-300);
+}
+
+.fromText strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-500);
+}
+
+/* 好友的一句话，做成气泡 */
+.message {
+  position: relative;
+  margin: 0 0 var(--space-100) 42px;
+  padding: var(--space-300) var(--space-400);
+  border-radius: 4px var(--corner-s) var(--corner-s) var(--corner-s);
+  background: rgba(201, 229, 253, 0.5);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-400);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-300);
+  padding: var(--space-300);
+  border-radius: var(--corner-s);
+  background: var(--mask);
+  box-shadow: 0 2px 14px rgba(20, 50, 90, 0.1);
+}
+
+.cover {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--button-mask);
+  flex-shrink: 0;
+}
+
+.songText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.songTitle {
+  font-size: 16px;
+  line-height: 21px;
+  font-weight: 600;
+  color: var(--text-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.songArtist {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-300);
+}
+
+.play {
+  min-height: 48px;
+  border-radius: var(--corner-round);
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-200);
+  box-shadow: 0 4px 14px rgba(22, 154, 243, 0.32);
+}
+
+.play:active {
+  transform: scale(0.98);
+}

@@ -31,6 +31,7 @@ export const TRACKS: TrackMeta[] = [
     bpm: 96,
     durationFallback: 263.11,
     style: "walk",
+    sceneHint: "小彩蛋 · 看看小人们的左右手",
     sceneCues: [
       { id: "hands-1", start: 3.33, end: 12.17, type: "leftRightMove" },
       { id: "hands-2", start: 82.07, end: 90.03, type: "leftRightMove" },
@@ -48,6 +49,7 @@ export const TRACKS: TrackMeta[] = [
     bpm: 84,
     durationFallback: 205.04,
     style: "duo",
+    sceneHint: "小彩蛋 · 跑到 副歌，留意跑道上相遇的两个人",
     sceneCues: [
       { id: "first-meet", start: 81.95, end: 88.45, type: "firstMeet" },
     ],

@@ -49,8 +49,39 @@
 /* 陪跑摘要胶囊 */
 .summaryRow {
   display: flex;
-  justify-content: center;
-  padding: var(--space-100) var(--space-500) var(--space-300);
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-100) var(--space-500) var(--space-200);
+}
+
+/* 彩蛋提示：浅色小字，无提示的歌曲仍占位以免切歌时布局跳动 */
+.sceneHint {
+  margin: 0;
+  min-height: 16px;
+  font-size: 11px;
+  line-height: 16px;
+  /* text-300 而非更淡的 text-200：这行是要被自助体验的观众读到的 */
+  color: var(--text-300);
+  text-align: center;
+  animation: hintIn 0.45s ease-out;
+}
+
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sceneHint {
+    animation: none;
+  }
 }
 
 .summaryPill {
@@ -88,16 +119,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-300);
-  padding: var(--space-100) var(--space-500) 0;
+  gap: var(--space-200);
+  padding: var(--space-100) var(--space-400) 0;
 }
 
 .companionToggle {
   display: flex;
   align-items: center;
-  gap: var(--space-200);
+  gap: 6px;
   min-height: 44px;
-  padding: 0 var(--space-300);
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0 10px;
   border-radius: var(--corner-round);
   background: rgba(255, 255, 255, 0.65);
   font-size: 13px;
@@ -137,9 +170,11 @@
 .secondaryBtn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-height: 44px;
-  padding: 0 var(--space-300);
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0 10px;
   border-radius: var(--corner-round);
   background: rgba(255, 255, 255, 0.65);
   font-size: 13px;
@@ -196,19 +231,8 @@
   }
 }
 
-/* 375 × 812 适配：整体略收紧 */
-@media (max-width: 380px) {
-  .trackTitle {
-    font-size: 20px;
-  }
-
-  .secondaryRow {
-    gap: var(--space-200);
-  }
-
-  .secondaryBtn,
-  .companionToggle {
-    padding: 0 var(--space-200);
-    font-size: 12px;
-  }
+/* 375 画框下收紧，保证三个入口单行排布不换行 */
+.secondaryBtn,
+.companionToggle {
+  font-size: 12px;
 }

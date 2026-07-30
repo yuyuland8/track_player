@@ -42,7 +42,7 @@ npm run preview   # 生产构建预览 http://localhost:4173
 - 拖动进度 / 切歌后：歌词高亮、彩蛋场景**必须由当前时间重新推导**，不允许依赖一次性 `setTimeout`。
 - 唱片盘面 `music_player_disk.png` **静止不转**；只有中孔下的专辑封面自转；人物公转是独立动画层，三者互不耦合。
 - 彩蛋触发只认 `tracks.ts` 里的 `sceneCues` 时间配置，**禁止**用"当前歌词字符串包含某句话"来触发。
-- 用户本人（`me`）不可被踢；跑道含本人最多 8 人。
+- 用户本人（`me`）不可被踢；跑道人数上限由 `MAX_ON_TRACK` 控制（当前不限）。
 - 不用 `alert()`；弹层支持遮罩关闭、关闭按钮、Escape；按钮点击区 ≥ 44px。
 
 ---
@@ -144,6 +144,8 @@ depth = (sinθ+1)/2 → scale = 0.8+0.34·depth；zIndex = 20+40·depth   // 下
 步频：CSS 变量 --step = 60/bpm 秒（walk ×1.5），肢体摆动动画时长与速度绑定
 ```
 
+名字标签浮在**头顶上方**（`bottom:100%` + `margin-bottom:5px`，绝对定位不参与按钮盒高度）。
+
 **落地点锚定**（易踩坑）：小人 DOM 用 `translate(-50%, -100%)` 定位，且 SVG 的
 `viewBox="0 0 36 44"` 底边正好是脚底、名字标签用绝对定位脱离文档流——三者配合
 才能让**脚底**精确落在轨道半径上。若把标签放回文档流或改回 `-92%`，锚点会变成
@@ -176,7 +178,13 @@ depth = (sinθ+1)/2 → scale = 0.8+0.34·depth；zIndex = 20+40·depth   // 下
 2. `.disk`（z2）：`music_player_disk.png` 盘面，**完全静止**（这张图的圆形内容并非完美对称，整体旋转会让外轮廓看起来晃动变形，所以绝不能转它）。
 3. `.runnerLayer`（z3）：小人 + 彩蛋特效。
 
-页面整体被**框定为一屏移动端画框**：`html/body` 锁 `overflow: hidden`，`#root` 为 `min(100vw,430px) × 100dvh` 且 `position: relative`；宽窗口下（≥520×720）居中渲染成 390×844 的手机外观。所有遮罩/抽屉/Toast 用 `position: absolute` 相对 `#root`，因此浮层被裁剪在画框内而不会溢出到桌面背景上。唱片舞台外层 `.stageWrap` 用 `flex:1` 吃掉剩余竖向空间，底部不留死区。
+页面被**硬锁为 375 × 812 的移动端画框**（路演基准）：
+
+- `#root` 固定 `375px × 812px`，`position: fixed` + `translate(-50%,-50%) scale(var(--frame-scale))` 居中。缩放系数由 `main.tsx` 的 `fitFrame()` 算出：`min(1, innerWidth/375, innerHeight/812)`，窗口比画框小就整体等比缩小，**任何窗口尺寸下底部按钮都完整可见**。
+- 不要改回 grid/flex 居中：布局盒（812）比窗口高时 grid 会顶到起始边，缩放后仍会溢出底部，正是"看不到好友管理按钮"的成因。
+- 所有遮罩/抽屉/Toast 用 `position: absolute` 相对 `#root`，浮层被裁剪在画框内。
+- 因为画框有 `scale`，**DiskStage 必须用 `offsetWidth/offsetHeight` 读舞台尺寸**（未缩放的布局尺寸），不能用 `getBoundingClientRect`，否则轨道半径会按缩放后的值计算而错位。
+- 唱片舞台外层 `.stageWrap` 用 `flex:1` 吃掉剩余竖向空间，底部不留死区；底部三个入口用 `white-space: nowrap` + `flex:0 0 auto` 防止 375 宽下换行。
 
 `music_player_disk.png`（866×866）的实测几何，所有尺寸常量都由它推导：
 
@@ -206,10 +214,19 @@ depth = (sinθ+1)/2 → scale = 0.8+0.34·depth；zIndex = 20+40·depth   // 下
 |---|---|
 | 在线开关 → 开 | 仅置为在线，不自动上跑道 |
 | 在线开关 → 关 | 置为离线，**若在跑道则强制退场**（离线不可能在跑道上） |
-| 「加入」按钮 | 需已在线 + 陪跑开启 + 未满 8 人，否则 Toast 说明原因并拒绝 |
+| 「加入」按钮 | 需已在线 + 陪跑开启 + 未超上限，否则 Toast 说明原因并拒绝 |
 | 「在跑道」按钮 | 下跑道但**保持在线** |
 
-- 加入：`joinTrack(ids)` 尊重 8 人上限，超限 Toast「跑道已满」。
+**跑道人数上限**由 `src/data/friends.ts` 的 `MAX_ON_TRACK` 单点控制，当前为 `Infinity`（不限人数）：
+
+```ts
+export const DEFAULT_MAX_ON_TRACK = 8;
+export const MAX_ON_TRACK: number = Infinity;   // 改成 DEFAULT_MAX_ON_TRACK 或任意数字即可恢复限制
+```
+
+加入拦截、初始名单截断、观众满员让位、面板提示文案全部读这一个值；`HAS_TRACK_LIMIT` 用于在不限人数时隐藏「跑道最多 N 人」这类提示。改完无需动其他文件。注意：不限人数时刷新会把**所有**已保存的观众恢复到跑道上，市集跑一天后可能人很多，需要的话在面板里删掉或改回有限上限。
+
+- 加入：`joinTrack(ids)` 尊重 `MAX_ON_TRACK` 上限，超限 Toast「跑道已满」。
 - 离开：`leaveTrack(id)` 只是标记 exiting → 引擎播完退场动画 → `handleExitDone` 真正移除。
 - 陪跑总开关：关 → 非本人按 120ms 错峰退场（本人留场）；开 → 在线好友批量入场。
 - 一键 2/4/8 人：目标集合 = `FRIENDS.slice(0, n-1)`，差集分别退场/入场。
@@ -223,15 +240,24 @@ depth = (sinθ+1)/2 → scale = 0.8+0.34·depth；zIndex = 20+40·depth   // 下
 - 存储键 `vinyl-track:guests:v1`，值为 `StoredGuest[]`（id / name / color / relationLabel / highFives / createdAt）。写入失败（隐私模式等）自动降级为仅内存，不报错。
 - 名册 = `[ME, ...FRIENDS, ...guests]`，App 内用 `byId()` 统一解析（**不要再用 `data/friends.ts` 的 `friendById`**，它不认识观众）。
 - **刷新后观众仍在线且优先占跑道名额**（最近加入的排前面），这是"观众回来还能看到自己在跑"的关键，别改成默认离线。
-- 跑道满员时新观众加入 → 自动让最后一位**预设好友**退场腾位（不动其他观众），保证现场体验永远成功。
+- 跑道满员时新观众加入 → 自动让最后一位**预设好友**退场腾位（不动其他观众），保证现场体验永远成功。当前 `MAX_ON_TRACK = Infinity`，该分支不会触发，但逻辑保留，恢复限制后自动生效。
 - 击掌次数直接累加进 localStorage（`recordHighFive`），所以观众的数字跨场次累计。取值统一走 App 的 `fivesFor(f)`：观众读持久值，预设好友读基础值 + 本次会话增量，**两条路径不要混用，否则会重复计数**。
 - 删除观众有二次确认；在跑道的先播退场动画再删记录（延迟 1s），避免动画途中数据被抽走。
 
-### 5.7 邀请卡（InviteModal.tsx）
+### 5.7 好友推歌（recommends.ts + RecommendModal.tsx）
+
+轻量社交钩子：预设好友名字旁出现小信封，红点 = 有一首没读过的推荐歌。
+
+- 数据在 `src/data/recommends.ts`（`friendId` / `trackId` / `message`），默认 3 条，进场即有 3 个红点。
+- 点信封 → 弹出推歌卡：好友头像 + 一句话气泡 + 歌曲卡片（复用 `TRACKS` 里的封面）+「去听这首」。
+- 「去听这首」调 `player.selectTrack(trackId)` 直接切歌并自动播放（`wasPlayingRef` 置真），同时关掉面板。
+- **已读状态只存在会话内**（`readRecIds`），刷新后红点重新出现——这是刻意的，方便对着下一位观众反复演示。
+
+### 5.8 邀请卡（InviteModal.tsx）
 
 Demo 性质：canvas 画 1080×1440 邀请卡（唱片 + 当前歌曲 + 6 位随机邀请码 + 标语），可预览、下载 PNG、复制邀请文案（`navigator.clipboard`，失败回退 `execCommand`）。卡面和按钮都明确标注 Demo，不伪装成真的发送成功。几何常量与 DiskStage 一致。
 
-### 5.8 陪跑周报（ReportModal.tsx）
+### 5.9 陪跑周报（ReportModal.tsx）
 
 打开时用**当下**数据在离屏 canvas 画 1080×1920：冰蓝渐变、品牌胶囊、主标题（当前好友数）、唱片+封面（圆形裁切）+按车道摆放的跑者彩点、三项统计（分钟/圈/和阿杰击掌）、情绪文案、歌名+日期、标语。图片用 `Image.onload` Promise 等待（同源本地资源，无跨域污染），`toDataURL` 出 PNG → 预览 `<img>` + `<a download>` 下载。失败走 Toast，不阻塞。
 
@@ -257,6 +283,9 @@ Demo 性质：canvas 画 1080×1440 邀请卡（唱片 + 当前歌曲 + 6 位随
 | 圈速 | `DiskStage.tsx` `baseW` 里的 `0.09` 系数 |
 | 车道半径 / 椭圆扁率 | `LANE_RX` / `RY_RATIO`（下界见 5.4 节，别低于 0.60） |
 | 封面大小与孔位贴合 | `.coverSpin` 的 `width`/`margin`/`top`（见 5.4 节实测表） |
+| 画框尺寸 | `global.css` 的 `#root` 宽高 + `main.tsx` 的 `FRAME_W/FRAME_H`（两处必须一致） |
+| 推歌内容与推荐人 | `src/data/recommends.ts` |
+| 跑道人数上限 | `src/data/friends.ts` 的 `MAX_ON_TRACK`（`Infinity` = 不限） |
 | 击掌距离/冷却 | `HIFIVE_DIST`(28px) / `HIFIVE_COOLDOWN`(12s) |
 | 接力追赶速度/判定角/超时 | relay 分支里的 `1.5` / `0.15` / `start+4.5` |
 | 相遇点位置 | `TARGET_ME`/`TARGET_BUDDY`（π/2±0.14） |
@@ -283,7 +312,9 @@ Demo 性质：canvas 画 1080×1440 邀请卡（唱片 + 当前歌曲 + 6 位随
 - [ ] 暂停 = 音频+歌词+进度+人物+彩蛋全停；拖进度后场景由时间重推导
 - [ ] 盘面静止、封面自转、人物公转三层互不干扰
 - [ ] 封面把中孔填满、边缘无缝无毛边；小人脚底在纹路带上（不站在封面上）
-- [ ] 陪跑开关有分批入/退场动画；8 人上限与「跑道已满」提示生效；本人不可踢
+- [ ] 陪跑开关有分批入/退场动画；本人不可踢；把 `MAX_ON_TRACK` 改成数字后上限与「跑道已满」提示能正常恢复
 - [ ] 三首歌彩蛋各自可触发（29.25s 接力 / 3.33s 举手 / 81.95s 相遇爱心）
 - [ ] 周报可预览、可下载 PNG，人数与击掌数与本次会话联动
-- [ ] 375×812 与 390×844 无横向滚动、无控制台报错、刷新后可正常进入
+- [ ] 画框在 1440×900 / 1280×720 / 1100×700 / 900×600 / 375×812 / 360×640 下均完整可见，底部入口不被裁
+- [ ] 三个信封红点可点开推歌卡，「去听这首」能切歌并播放，已读后红点消失
+- [ ] 无横向滚动、无控制台报错、刷新后可正常进入

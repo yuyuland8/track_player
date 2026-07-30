@@ -2,7 +2,7 @@
 .stage {
   position: relative;
   flex: 0 0 auto;
-  width: min(86%, 340px, 40dvh);
+  width: min(86%, 340px);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
 }
@@ -293,14 +293,14 @@
   fill: #ffc53d;
 }
 
-/* 名字标签：挂在脚底下方，不参与按钮盒高度 */
+/* 名字标签：浮在头顶上方，不参与按钮盒高度（毕业帽会略微超出盒顶，故留 5px） */
 .name,
 .nameMe {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 1px;
+  margin-bottom: 5px;
   font-size: 10px;
   line-height: 14px;
   padding: 0 6px;

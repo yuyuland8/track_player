@@ -142,9 +142,10 @@ export default function DiskStage({
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
+    // 用 offsetWidth/Height 而非 getBoundingClientRect：画框整体 scale 后
+    // 前者仍是未缩放的布局尺寸，与 transform 写入的局部坐标系一致
     const ro = new ResizeObserver(() => {
-      const rect = el.getBoundingClientRect();
-      sizeRef.current = { w: rect.width, h: rect.height };
+      sizeRef.current = { w: el.offsetWidth, h: el.offsetHeight };
     });
     ro.observe(el);
     return () => ro.disconnect();

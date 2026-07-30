@@ -166,6 +166,13 @@
   flex-direction: column;
 }
 
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-100);
+  min-width: 0;
+}
+
 .name {
   font-size: 14px;
   line-height: 19px;
@@ -173,6 +180,51 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 好友推歌入口：小信封 + 未读红点 */
+.mail {
+  position: relative;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin: -6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-600);
+}
+
+.mail:active {
+  opacity: 0.6;
+}
+
+.dot {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1.5px solid #fff;
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
 }
 
 .stateOn,

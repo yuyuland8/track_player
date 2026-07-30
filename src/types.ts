@@ -23,6 +23,8 @@ export type TrackMeta = {
   durationFallback: number;
   style: MoveStyle;
   sceneCues: SceneCue[];
+  /** 自助体验用的彩蛋提示，显示在陪跑摘要下方；留空则不显示 */
+  sceneHint?: string;
 };
 
 export type Friend = {

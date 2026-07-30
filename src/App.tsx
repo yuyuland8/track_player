@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, FileImage, MoreHorizontal, Users } from "lucide-react";
 import { TRACKS } from "./data/tracks";
 import { BESTIE_ID, FRIENDS, MAX_ON_TRACK, ME, ME_ID } from "./data/friends";
+import { RECOMMENDS, RECOMMEND_BY_FRIEND } from "./data/recommends";
 import { parseLrc } from "./utils/lrc";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useToasts } from "./hooks/useToasts";
@@ -16,6 +17,7 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import ReportModal, { type ReportData } from "./components/ReportModal";
 import AddGuestModal from "./components/AddGuestModal";
 import InviteModal from "./components/InviteModal";
+import RecommendModal from "./components/RecommendModal";
 import type { Friend, LyricLine } from "./types";
 import styles from "./App.module.css";
 
@@ -158,7 +160,7 @@ export default function App() {
     }
   };
 
-  /** 跑道开关：只对在线好友生效，受 8 人上限约束 */
+  /** 跑道开关：只对在线好友生效，受 MAX_ON_TRACK 上限约束（当前不限人数） */
   const handleToggleTrack = (id: string, onTrack: boolean) => {
     const friend = byId(id);
     if (onTrack) {
@@ -171,7 +173,7 @@ export default function App() {
         return;
       }
       if (trackFull) {
-        showToast("跑道已满，最多 8 人");
+        showToast(`跑道已满，最多 ${MAX_ON_TRACK} 人`);
         return;
       }
       if (exitingIds.includes(id)) return;
@@ -247,6 +249,9 @@ export default function App() {
   const [addGuestOpen, setAddGuestOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<Friend | null>(null);
   const [guestToRemove, setGuestToRemove] = useState<Friend | null>(null);
+  // 好友推歌：已读列表只存会话内，刷新后红点重新出现，方便反复演示
+  const [readRecIds, setReadRecIds] = useState<string[]>([]);
+  const [recFriendId, setRecFriendId] = useState<string | null>(null);
 
   const handleRunnerClick = useCallback(
     (f: Friend) => {
@@ -297,6 +302,20 @@ export default function App() {
     if (cardFriendId === id) setCardFriendId(null);
     showToast(`已删除观众 ${name}`);
     setGuestToRemove(null);
+  };
+
+  const handleOpenRecommend = (f: Friend) => {
+    setRecFriendId(f.id);
+    setReadRecIds((prev) => (prev.includes(f.id) ? prev : [...prev, f.id]));
+  };
+
+  const handlePlayRecommend = () => {
+    const rec = recFriendId ? RECOMMEND_BY_FRIEND[recFriendId] : undefined;
+    if (!rec) return;
+    player.selectTrack(rec.trackId);
+    showToast(`正在播放 ${byId(rec.friendId).name} 推荐的歌`);
+    setRecFriendId(null);
+    setPanelOpen(false);
   };
 
   const handleKickConfirm = () => {
@@ -353,6 +372,10 @@ export default function App() {
         <span className={styles.summaryPill}>
           {onTrackIds.length} 人正在陪跑 · 本周 {weeklyMinutes} 分钟
         </span>
+        {/* 高度恒定：无提示的歌曲也占位，切歌时唱片不会上下跳 */}
+        <p className={styles.sceneHint} key={player.track.id}>
+          {player.track.sceneHint}
+        </p>
       </div>
 
       <div className={styles.stageWrap}>
@@ -442,6 +465,25 @@ export default function App() {
         onInvite={() => setInviteOpen(true)}
         onAddGuest={() => setAddGuestOpen(true)}
         onRemoveGuest={(f) => setGuestToRemove(f)}
+        recommendIds={RECOMMENDS.map((r) => r.friendId)}
+        readRecIds={readRecIds}
+        onOpenRecommend={handleOpenRecommend}
+      />
+
+      <RecommendModal
+        friend={recFriendId ? byId(recFriendId) : null}
+        track={
+          recFriendId
+            ? (TRACKS.find(
+                (t) => t.id === RECOMMEND_BY_FRIEND[recFriendId]?.trackId,
+              ) ?? null)
+            : null
+        }
+        message={
+          recFriendId ? (RECOMMEND_BY_FRIEND[recFriendId]?.message ?? "") : ""
+        }
+        onPlay={handlePlayRecommend}
+        onClose={() => setRecFriendId(null)}
       />
 
       <AddGuestModal

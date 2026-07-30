@@ -114,6 +114,17 @@ export function useAudioPlayer({ tracks, onError }: Options) {
   const next = useCallback(() => step(1), [step]);
   const prev = useCallback(() => step(-1), [step]);
 
+  /** 按歌曲 id 直接切过去并开始播放（好友推歌用） */
+  const selectTrack = useCallback(
+    (id: string) => {
+      const idx = tracks.findIndex((t) => t.id === id);
+      if (idx < 0) return;
+      wasPlayingRef.current = true;
+      setIndex(idx);
+    },
+    [tracks],
+  );
+
   const seek = useCallback((target: number) => {
     const audio = audioRef.current!;
     const max = Number.isFinite(audio.duration) ? audio.duration : Infinity;
@@ -133,6 +144,7 @@ export function useAudioPlayer({ tracks, onError }: Options) {
     toggle,
     next,
     prev,
+    selectTrack,
     seek,
     getListenedSeconds,
   };

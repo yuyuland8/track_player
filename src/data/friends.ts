@@ -3,7 +3,19 @@ import type { Friend } from "../types";
 export const ME_ID = "me";
 /** star crossing night 的默契主角好友 */
 export const BESTIE_ID = "ajie";
-export const MAX_ON_TRACK = 8;
+/**
+ * 跑道人数上限（含用户本人）。
+ *
+ * 当前设为 Infinity＝不限人数。想恢复限制，只改这一行即可，例如：
+ *   export const MAX_ON_TRACK: number = DEFAULT_MAX_ON_TRACK;  // 恢复 8 人
+ *   export const MAX_ON_TRACK: number = 12;                    // 自定义人数
+ * 「跑道已满」提示、加入拦截、观众满员让位这些逻辑都读这个值，改完自动重新生效。
+ */
+export const DEFAULT_MAX_ON_TRACK = 8;
+export const MAX_ON_TRACK: number = Infinity;
+
+/** 是否启用了人数限制（Infinity 时为 false，界面上相关提示会自动隐藏） */
+export const HAS_TRACK_LIMIT = Number.isFinite(MAX_ON_TRACK);
 
 export const ME: Friend = {
   id: ME_ID,

@@ -62,29 +62,28 @@ body {
 body {
   font-family: var(--font-primary);
   color: var(--text-500);
-  background: #dceafd;
+  background: radial-gradient(circle at 50% 30%, #eef4fb 0%, #d9e4f1 100%);
 }
 
+/* 画框恒为 375 × 812 逻辑像素。窗口小于该尺寸时整体等比缩小
+   （--frame-scale 由 main.tsx 计算），保证底部按钮永远完整可见、绝不被裁掉。
+   用 fixed + 居中变换而非 grid 居中：布局盒比窗口高时 grid 会顶到起始边，
+   缩放后依然会溢出底部。 */
 #root {
-  position: relative; /* 作为遮罩/抽屉/Toast 的定位参照，使浮层被裁剪在画框内 */
-  width: min(100vw, 430px);
-  height: 100dvh;
-  margin: 0 auto;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 375px;
+  height: 812px;
   overflow: hidden;
   background: var(--bg-gradient);
+  transform: translate(-50%, -50%) scale(var(--frame-scale, 1));
+  transform-origin: center center;
 }
 
-/* 桌面/路演大窗口：居中成一台手机的样子，不再留大片空白 */
-@media (min-width: 520px) and (min-height: 720px) {
-  body {
-    display: grid;
-    place-items: center;
-    background: radial-gradient(circle at 50% 30%, #eef4fb 0%, #d9e4f1 100%);
-  }
-
+/* 桌面/路演窗口：给画框加上手机外观 */
+@media (min-width: 460px) {
   #root {
-    width: 390px;
-    height: 844px;
     border-radius: 38px;
     box-shadow:
       0 24px 60px rgba(20, 50, 90, 0.22),
