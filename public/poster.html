@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>唱片跑道 · 项目海报</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        background: #dbe8f7;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        font-family: "PingFang SC", -apple-system, BlinkMacSystemFont,
+          "Helvetica Neue", "Segoe UI", sans-serif;
+      }
+
+      /* 海报画布：1600 × 732，与参考图同比例。截图/打印时按此尺寸即可。
+         窗口小于该尺寸时整体等比缩小，方便在任意屏幕上预览全貌。 */
+      .poster {
+        position: relative;
+        width: 1600px;
+        height: 732px;
+        overflow: hidden;
+        flex: none;
+        transform: scale(var(--fit, 1));
+        transform-origin: center center;
+        background:
+          radial-gradient(1150px 640px at 76% 44%, rgba(120, 190, 250, 0.45) 0%, transparent 64%),
+          radial-gradient(780px 540px at 10% 86%, rgba(49, 181, 237, 0.26) 0%, transparent 62%),
+          radial-gradient(680px 460px at 30% 8%, rgba(255, 255, 255, 0.85) 0%, transparent 60%),
+          linear-gradient(132deg, #cfe6fd 0%, #e2f0ff 44%, #eef8ff 72%, #f2fbfe 100%);
+      }
+
+      /* 浅色底上的装饰：淡蓝色点阵，替代深色海报的星点 */
+      .stars {
+        position: absolute;
+        inset: 0;
+        background-image:
+          radial-gradient(2px 2px at 12% 18%, rgba(49,181,237,.30) 50%, transparent 51%),
+          radial-gradient(1.6px 1.6px at 27% 62%, rgba(49,181,237,.22) 50%, transparent 51%),
+          radial-gradient(2.4px 2.4px at 41% 12%, rgba(22,154,243,.24) 50%, transparent 51%),
+          radial-gradient(1.6px 1.6px at 8% 74%, rgba(49,181,237,.20) 50%, transparent 51%),
+          radial-gradient(2px 2px at 55% 84%, rgba(49,181,237,.18) 50%, transparent 51%),
+          radial-gradient(2.2px 2.2px at 66% 22%, rgba(22,154,243,.16) 50%, transparent 51%),
+          radial-gradient(1.6px 1.6px at 34% 38%, rgba(49,181,237,.20) 50%, transparent 51%),
+          radial-gradient(1.8px 1.8px at 19% 44%, rgba(49,181,237,.16) 50%, transparent 51%);
+      }
+
+      /* 四角星光 */
+      .spark {
+        position: absolute;
+        background: #31b5ed;
+        clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+        opacity: .5;
+      }
+      .spark.s1 { width: 26px; height: 26px; left: 5.5%; top: 30%; }
+      .spark.s2 { width: 16px; height: 16px; left: 44%;  top: 15%; opacity: .34; }
+      .spark.s3 { width: 20px; height: 20px; left: 39%;  top: 79%; opacity: .3; }
+
+      /* 顶部标识区 */
+      .top {
+        position: absolute;
+        left: 76px;
+        top: 58px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .logoSlot {
+        height: 46px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(22, 154, 243, 0.18);
+        box-shadow: 0 4px 14px rgba(30, 70, 130, 0.1);
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: .01em;
+        white-space: nowrap;
+        color: #101114;
+      }
+      .badge {
+        height: 46px;
+        padding: 0 22px;
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #31b5ed, #169af3);
+        color: #fff;
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: .01em;
+        box-shadow: 0 6px 18px rgba(22,154,243,.32);
+      }
+
+      /* 左侧文案区 */
+      .left {
+        position: absolute;
+        left: 76px;
+        top: 166px;
+        width: 800px;
+      }
+
+      .title {
+        position: relative;
+        display: inline-block;
+        font-size: 132px;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: .04em;
+        color: #101114;
+        text-shadow: 0 8px 26px rgba(30, 70, 130, .18);
+      }
+      .quote {
+        position: absolute;
+        font-size: 92px;
+        font-weight: 800;
+        color: rgba(22, 154, 243, .5);
+        line-height: 1;
+      }
+      .quote.open  { left: -62px; top: -14px; }
+      .quote.close { right: -60px; bottom: 6px; }
+
+      .divider {
+        width: 96px;
+        height: 5px;
+        margin: 42px 0 30px;
+        border-radius: 99px;
+        background: linear-gradient(90deg, #31b5ed, #169af3);
+      }
+
+      .cn {
+        font-size: 27px;
+        line-height: 1.72;
+        font-weight: 600;
+        color: rgba(0,0,0,.72);
+      }
+      .cn em {
+        font-style: normal;
+        color: #0f8fdd;
+      }
+
+      .en {
+        margin-top: 20px;
+        font-size: 15px;
+        line-height: 1.75;
+        color: rgba(0,0,0,.36);
+        letter-spacing: .01em;
+      }
+
+      .slogan {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 40px;
+        padding: 13px 26px;
+        border-radius: 99px;
+        background: linear-gradient(135deg, #31b5ed, #169af3);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: .02em;
+        box-shadow: 0 8px 22px rgba(22,154,243,.3);
+      }
+      .slogan .dot {
+        width: 9px; height: 9px; border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(255,255,255,.9);
+      }
+
+      .features {
+        margin-top: 26px;
+        font-size: 15px;
+        color: rgba(0,0,0,.4);
+        letter-spacing: .04em;
+      }
+
+      /* 右侧手机 */
+      .phones {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 760px;
+        height: 732px;
+      }
+      .phone {
+        position: absolute;
+        width: 375px;
+        height: 812px;
+        border-radius: 46px;
+        background: #0f1522;
+        padding: 9px;
+        box-shadow:
+          0 34px 70px rgba(30, 70, 130, .28),
+          0 0 0 1px rgba(255,255,255,.5);
+      }
+      .phone iframe {
+        width: 375px;
+        height: 812px;
+        border: 0;
+        border-radius: 38px;
+        display: block;
+        background: #eff6ff;
+      }
+      /* 812 高的机身放进 732 高的画布：整体缩放后再旋转 */
+      .phone.a {
+        left: 14px;
+        top: 92px;
+        transform: scale(.635) rotate(-9deg);
+        transform-origin: top left;
+        z-index: 2;
+      }
+      .phone.b {
+        left: 322px;
+        top: 24px;
+        transform: scale(.635) rotate(7deg);
+        transform-origin: top left;
+        z-index: 1;
+      }
+
+      /* 手机下方的光晕 */
+      .glow {
+        position: absolute;
+        right: 120px;
+        bottom: -150px;
+        width: 640px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(49,181,237,.4), transparent);
+        filter: blur(8px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="poster">
+      <div class="stars"></div>
+      <span class="spark s1"></span>
+      <span class="spark s2"></span>
+      <span class="spark s3"></span>
+      <div class="glow"></div>
+
+      <div class="top">
+        <span class="logoSlot">TME 音乐学堂「2026 音乐练习生 X 计划」</span>
+        <span class="badge">AI Hackathon</span>
+      </div>
+
+      <div class="left">
+        <span class="title">
+          <span class="quote open">“</span>唱片跑道<span class="quote close">”</span>
+        </span>
+
+        <div class="divider"></div>
+
+        <p class="cn">
+          陪伴·共听·累计伴听时长<br />
+          你能<em>看见</em>：此刻有谁，正陪你跑在同一张唱片上。
+        </p>
+
+        <p class="features">皮肤特效 · 场景触发彩蛋 · 相遇击掌 · 好友推歌 · 陪跑周报</p>
+
+        <span class="slogan"><span class="dot"></span>这一首，陪你一起跑</span>
+
+        
+      </div>
+
+      <div class="phones">
+        <div class="phone a"><iframe id="fa" src="./index.html"></iframe></div>
+        <div class="phone b"><iframe id="fb" src="./index.html"></iframe></div>
+      </div>
+    </div>
+
+    <script>
+      // 两台手机展示不同界面：左边播放器（青春修炼手册，戴毕业帽最好看），右边陪跑周报
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      function fitPoster() {
+        const fit = Math.min(1, innerWidth / 1600, innerHeight / 732);
+        document.documentElement.style.setProperty("--fit", String(fit));
+      }
+      fitPoster();
+      addEventListener("resize", fitPoster);
+
+      window.addEventListener("load", async () => {
+        await wait(1300);
+        try {
+          const a = document.getElementById("fa").contentDocument;
+          const nextA = [...a.querySelectorAll("button")].find(
+            (b) => b.getAttribute("aria-label") === "下一首",
+          );
+          nextA && nextA.click();
+        } catch (e) {}
+
+        try {
+          const b = document.getElementById("fb").contentDocument;
+          const report = [...b.querySelectorAll("button")].find((x) =>
+            (x.textContent || "").includes("生成陪跑周报"),
+          );
+          report && report.click();
+        } catch (e) {}
+      });
+    </script>
+  </body>
+</html>
