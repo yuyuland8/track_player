@@ -23,20 +23,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production site
+        run: npm run build
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-
-      - name: Prepare static site
-        run: |
-          mkdir -p _site
-          cp "唱片跑道Demo.html" _site/index.html
-          cp -R "唱片跑道素材" _site/
-          touch _site/.nojekyll
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: _site
+          path: dist
 
   deploy:
     environment:
