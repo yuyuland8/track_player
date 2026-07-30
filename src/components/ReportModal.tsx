@@ -25,7 +25,10 @@ type Props = {
 const W = 1080;
 const H = 1920;
 const GOLDEN = 2.399963;
-const LANE_RX = [0.52, 0.63, 0.74];
+/* 与 DiskStage 保持一致：中孔占盘面 55.14%（孔心高 0.46%），车道在纹路区 */
+const LANE_RX = [0.65, 0.76, 0.87];
+const COVER_RATIO = 0.285;
+const HOLE_OFFSET_Y = -0.0046;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -106,7 +109,13 @@ async function renderReport(data: ReportData): Promise<string> {
   const diskSize = 720;
   const dcx = W / 2;
   const dcy = 760;
-  drawCoverCircle(ctx, cover, dcx, dcy, diskSize * 0.2125);
+  drawCoverCircle(
+    ctx,
+    cover,
+    dcx,
+    dcy + diskSize * HOLE_OFFSET_Y,
+    diskSize * COVER_RATIO,
+  );
   ctx.drawImage(disk, dcx - diskSize / 2, dcy - diskSize / 2, diskSize, diskSize);
   // 跑道上的小伙伴
   data.colors.forEach((color, i) => {

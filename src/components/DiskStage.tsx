@@ -10,7 +10,9 @@ import { BESTIE_ID, ME_ID } from "../data/friends";
 import diskImg from "../assets/music-player-disk.png";
 import styles from "./DiskStage.module.css";
 
-const LANE_RX = [0.52, 0.63, 0.74];
+/* 三条车道半径（cx = 舞台半宽的倍数）。盘面实测可跑区间为 0.551（中孔边缘）
+   到 0.957（盘面外缘），车道落在其中，确保小人踩在唱片纹路上而不是封面上。 */
+const LANE_RX = [0.65, 0.76, 0.87];
 const RY_RATIO = 0.94;
 const GOLDEN = 2.399963;
 const HIFIVE_DIST = 28;
@@ -488,10 +490,12 @@ export default function DiskStage({
           dir = otherX >= x ? 1 : -1;
         }
 
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -92%) scale(${scale.toFixed(3)})`;
+        // translate(-50%,-100%)：小人 SVG 的脚底正好落在轨道点上（名字标签脱离文档流）
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(3)})`;
         el.style.zIndex = String(20 + Math.round(depth * 40));
         el.style.opacity = (alpha * (dim ? 0.45 : 1)).toFixed(2);
         el.style.setProperty("--dir", String(dir));
+        el.style.setProperty("--s", scale.toFixed(3));
 
         // 姿态
         let pose = "";
@@ -651,11 +655,12 @@ function RunnerView({ friend, showHat, stepDur, onClick, refCb }: RunnerViewProp
         onClick={onClick}
       >
         <span className={styles.flip}>
+          {/* viewBox 底边 = 脚底（腿部 y=31+13=44），使 SVG 盒底即落地点 */}
           <svg
             className={styles.figure}
-            viewBox="0 0 36 52"
+            viewBox="0 0 36 44"
             width="30"
-            height="43"
+            height="37"
             aria-hidden="true"
           >
             <rect className={`${styles.limb} ${styles.armBack}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
