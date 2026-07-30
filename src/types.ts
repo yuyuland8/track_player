@@ -1,6 +1,11 @@
 export type LyricLine = { time: number; text: string };
 
-export type SceneCueType = "relay" | "leftRightMove" | "firstMeet";
+export type SceneCueType =
+  | "relay"
+  | "leftRightMove"
+  | "firstMeet"
+  | "loveCall"
+  | "loveNeon";
 
 export type SceneCue = {
   id: string;
@@ -10,7 +15,8 @@ export type SceneCue = {
 };
 
 /** run: 常规跑步；walk: 校园散步（青春修炼手册）；duo: 双人主角（star crossing night） */
-export type MoveStyle = "run" | "walk" | "duo";
+/** fan: 粉丝萝卜皮肤，没有脚，用一蹦一蹦代替跑步 */
+export type MoveStyle = "run" | "walk" | "duo" | "fan";
 
 export type TrackMeta = {
   id: string;
@@ -22,6 +28,8 @@ export type TrackMeta = {
   bpm: number;
   durationFallback: number;
   style: MoveStyle;
+  /** 该歌曲的角色皮肤图（设置后小人整体替换为这张图） */
+  skin?: string;
   sceneCues: SceneCue[];
   /** 自助体验用的彩蛋提示，显示在陪跑摘要下方；留空则不显示 */
   sceneHint?: string;
@@ -42,4 +50,8 @@ export type Friend = {
   relationLabel?: string;
   /** 来自 Supabase 的真实成员行（内部使用） */
   _memberRow?: Record<string, unknown>;
+  /** 生产模式中的实时在线状态（内部使用） */
+  _online?: boolean;
+  /** 生产模式中的实时跑道状态（内部使用） */
+  _onTrack?: boolean;
 };

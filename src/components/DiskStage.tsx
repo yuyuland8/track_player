@@ -13,6 +13,8 @@ import styles from "./DiskStage.module.css";
 /* 三条车道半径（cx = 舞台半宽的倍数）。盘面实测可跑区间为 0.551（中孔边缘）
    到 0.957（盘面外缘），车道落在其中，确保小人踩在唱片纹路上而不是封面上。 */
 const LANE_RX = [0.65, 0.76, 0.87];
+/* 萝卜以身体中心对齐赛道，因此原尺寸也能完整留在中孔与外缘之间。 */
+const FAN_LANE_RX = [0.76, 0.8, 0.84];
 const RY_RATIO = 0.94;
 const GOLDEN = 2.399963;
 const HIFIVE_DIST = 28;
@@ -35,6 +37,7 @@ type Sim = {
   boost: number;
   lastPose: string;
   lastBaton: boolean;
+  lastShout: string;
 };
 
 type FX = {
@@ -100,6 +103,7 @@ export default function DiskStage({
   const elsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const joinCountRef = useRef(0);
   const [fxs, setFxs] = useState<FX[]>([]);
+  const [neonOn, setNeonOn] = useState(false);
 
   const propsRef = useRef({
     track,
@@ -134,6 +138,7 @@ export default function DiskStage({
       clearAt: 0,
     },
     meet: { captured: false, fromA: 0, fromB: 0, heartFx: 0 },
+    love: { cueId: "", picked: [] as string[], neon: false },
     lapAcc: 0,
     fxSeq: 1,
   });
@@ -170,6 +175,7 @@ export default function DiskStage({
           boost: 1,
           lastPose: "",
           lastBaton: false,
+          lastShout: "",
         });
         joinCountRef.current += 1;
         batch += 1;
@@ -196,6 +202,10 @@ export default function DiskStage({
     tr.relay.batonId = "";
     tr.relay.clearAt = 0;
     tr.meet.captured = false;
+    tr.love.cueId = "";
+    tr.love.picked = [];
+    tr.love.neon = false;
+    setNeonOn(false);
     if (tr.meet.heartFx) {
       const heartId = tr.meet.heartFx;
       setFxs((list) => list.filter((f) => f.id !== heartId));
@@ -252,6 +262,7 @@ export default function DiskStage({
           if (t < c.start - 0.3) tr.relay.fired.delete(c.id);
         }
         tr.meet.captured = false;
+        tr.love.cueId = "";
         for (const sim of sims.values()) {
           sim.freezeUntil = 0;
           sim.boostUntil = 0;
@@ -287,7 +298,8 @@ export default function DiskStage({
         tk.style === "duo" && !!meetCue && t >= meetCue.start && t <= meetCue.end;
 
       // 速度：BPM × 个人 pace × 场景系数
-      const styleMul = tk.style === "walk" ? 0.55 : tk.style === "duo" ? 0.8 : 1;
+      const styleMul =
+        tk.style === "walk" ? 0.55 : tk.style === "duo" ? 0.8 : tk.style === "fan" ? 0.9 : 1;
       const baseW = ((tk.bpm * 0.09 * styleMul) / 180) * Math.PI;
       const motionMul = rm ? 0.35 : 1;
 
@@ -404,6 +416,38 @@ export default function DiskStage({
           t < (activeCue.start + activeCue.end) / 2 ? "left" : "right";
       }
 
+      // ---- L.O.V.E 合唱：前半段选 4 只萝卜依次喊字母，后半段整体霓虹字 ----
+      let shoutMap: Map<string, string> | null = null;
+      if (activeCue?.type === "loveCall") {
+        const runnable = [...sims.values()].filter((sm) => sm.phase === "run");
+        if (runnable.length >= 4) {
+          if (tr.love.cueId !== activeCue.id) {
+            tr.love.cueId = activeCue.id;
+            const pool = runnable.map((sm) => sm.friend.id);
+            for (let i = pool.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            tr.love.picked = pool.slice(0, 4);
+          }
+          const per = (activeCue.end - activeCue.start) / 4;
+          shoutMap = new Map();
+          tr.love.picked.forEach((pid, i) => {
+            const at = activeCue.start + i * per;
+            // 每个发音严格对应一个萝卜和一个字母，不与下一个字母重叠
+            if (t >= at && t < at + per) shoutMap!.set(pid, "LOVE"[i]);
+          });
+        }
+      } else if (tr.love.cueId) {
+        tr.love.cueId = "";
+      }
+
+      const wantNeon = activeCue?.type === "loveNeon";
+      if (wantNeon !== tr.love.neon) {
+        tr.love.neon = wantNeon;
+        setNeonOn(wantNeon);
+      }
+
       // ---- 运动与渲染 ----
       const positioned: { sim: Sim; x: number; y: number }[] = [];
       for (const [id, sim] of sims) {
@@ -476,7 +520,7 @@ export default function DiskStage({
           }
         }
 
-        const rxF = LANE_RX[effLane];
+        const rxF = (tk.style === "fan" ? FAN_LANE_RX : LANE_RX)[effLane];
         const rx = cx * rxF * radiusMul;
         const ry = cy * rxF * RY_RATIO * radiusMul;
         const x = cx + rx * Math.cos(sim.theta);
@@ -491,8 +535,9 @@ export default function DiskStage({
           dir = otherX >= x ? 1 : -1;
         }
 
-        // translate(-50%,-100%)：小人 SVG 的脚底正好落在轨道点上（名字标签脱离文档流）
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -100%) scale(${scale.toFixed(3)})`;
+        // 普通小人用脚底落在轨道点；萝卜较宽厚，改用身体中心落在轨道中心线
+        const anchorY = tk.style === "fan" ? "-50%" : "-100%";
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, ${anchorY}) scale(${scale.toFixed(3)})`;
         el.style.zIndex = String(20 + Math.round(depth * 40));
         el.style.opacity = (alpha * (dim ? 0.45 : 1)).toFixed(2);
         el.style.setProperty("--dir", String(dir));
@@ -507,6 +552,12 @@ export default function DiskStage({
         if (pose !== sim.lastPose) {
           el.dataset.pose = pose;
           sim.lastPose = pose;
+        }
+
+        const shout = shoutMap?.get(id) ?? "";
+        if (shout !== sim.lastShout) {
+          el.dataset.shout = shout;
+          sim.lastShout = shout;
         }
 
         const baton = relay.batonId === id;
@@ -585,7 +636,11 @@ export default function DiskStage({
   }, [audioRef]);
 
   const stepDur =
-    track.style === "walk" ? (60 / track.bpm) * 1.5 : 60 / track.bpm;
+    track.style === "walk"
+      ? (60 / track.bpm) * 1.5
+      : track.style === "fan"
+        ? (60 / track.bpm) * 2
+        : 60 / track.bpm;
 
   return (
     <div
@@ -615,6 +670,7 @@ export default function DiskStage({
             key={friend.id}
             friend={friend}
             showHat={track.style === "walk"}
+            skinSrc={track.skin}
             stepDur={stepDur}
             onClick={() => onRunnerClick(friend)}
             refCb={(el) => {
@@ -626,6 +682,15 @@ export default function DiskStage({
         {fxs.map((fx) => (
           <FxView key={fx.id} fx={fx} />
         ))}
+        {neonOn && (
+          <div className={styles.neon} aria-hidden="true">
+            <span>L</span>
+            <span>O</span>
+            <span>V</span>
+            <span>E</span>
+            <b>!!</b>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -634,12 +699,14 @@ export default function DiskStage({
 type RunnerViewProps = {
   friend: Friend;
   showHat: boolean;
+  /** 有皮肤图时整体替换掉 SVG 小人 */
+  skinSrc?: string;
   stepDur: number;
   onClick: () => void;
   refCb: (el: HTMLDivElement | null) => void;
 };
 
-function RunnerView({ friend, showHat, stepDur, onClick, refCb }: RunnerViewProps) {
+function RunnerView({ friend, showHat, skinSrc, stepDur, onClick, refCb }: RunnerViewProps) {
   return (
     <div
       ref={refCb}
@@ -655,38 +722,44 @@ function RunnerView({ friend, showHat, stepDur, onClick, refCb }: RunnerViewProp
         aria-label={friend.isMe ? "我（用户本人）" : `好友 ${friend.name}`}
         onClick={onClick}
       >
-        <span className={styles.flip}>
-          {/* viewBox 底边 = 脚底（腿部 y=31+13=44），使 SVG 盒底即落地点 */}
-          <svg
-            className={styles.figure}
-            viewBox="0 0 36 44"
-            width="30"
-            height="37"
-            aria-hidden="true"
-          >
-            <rect className={`${styles.limb} ${styles.armBack}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
-            <rect className={`${styles.limb} ${styles.legBack}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
-            <rect className={styles.torso} x="12.5" y="17" width="11" height="16" rx="5" />
-            <g className={styles.headG}>
-              <circle className={styles.head} cx="18" cy="10" r="6" />
-              <path
-                className={styles.hair}
-                d="M12 10 a6 6 0 0 1 12 0 l0 -2.4 a6 6 0 0 0 -12 0 z"
-              />
-              {showHat && (
-                <g className={styles.hat}>
-                  <rect x="14.6" y="2.6" width="6.8" height="3" rx="1" />
-                  <polygon points="18,-1.4 27,2.6 18,6.6 9,2.6" />
-                  <line x1="24.6" y1="3.4" x2="26.4" y2="8.2" />
-                  <circle cx="26.4" cy="8.8" r="1.2" />
-                </g>
-              )}
-            </g>
-            <rect className={`${styles.limb} ${styles.legFront}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
-            <rect className={`${styles.limb} ${styles.armFront}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
-            <rect className={styles.baton} x="19.5" y="27.5" width="11" height="3" rx="1.5" />
-          </svg>
-        </span>
+        {skinSrc ? (
+          <span className={styles.flip}>
+            <img className={styles.skin} src={skinSrc} alt="" />
+          </span>
+        ) : (
+          <span className={styles.flip}>
+            {/* viewBox 底边 = 脚底（腿部 y=31+13=44），使 SVG 盒底即落地点 */}
+            <svg
+              className={styles.figure}
+              viewBox="0 0 36 44"
+              width="30"
+              height="37"
+              aria-hidden="true"
+            >
+              <rect className={`${styles.limb} ${styles.armBack}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
+              <rect className={`${styles.limb} ${styles.legBack}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
+              <rect className={styles.torso} x="12.5" y="17" width="11" height="16" rx="5" />
+              <g className={styles.headG}>
+                <circle className={styles.head} cx="18" cy="10" r="6" />
+                <path
+                  className={styles.hair}
+                  d="M12 10 a6 6 0 0 1 12 0 l0 -2.4 a6 6 0 0 0 -12 0 z"
+                />
+                {showHat && (
+                  <g className={styles.hat}>
+                    <rect x="14.6" y="2.6" width="6.8" height="3" rx="1" />
+                    <polygon points="18,-1.4 27,2.6 18,6.6 9,2.6" />
+                    <line x1="24.6" y1="3.4" x2="26.4" y2="8.2" />
+                    <circle cx="26.4" cy="8.8" r="1.2" />
+                  </g>
+                )}
+              </g>
+              <rect className={`${styles.limb} ${styles.legFront}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
+              <rect className={`${styles.limb} ${styles.armFront}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
+              <rect className={styles.baton} x="19.5" y="27.5" width="11" height="3" rx="1.5" />
+            </svg>
+          </span>
+        )}
         <span className={friend.isMe ? styles.nameMe : styles.name}>
           {friend.name}
         </span>

@@ -301,6 +301,8 @@ export function trackFriendToFriend(
     baseHighFives: 0,
     isMe: false,
     isGuest: false,
+    _online: f.is_online,
+    _onTrack: f.is_on_track,
   };
 }
 

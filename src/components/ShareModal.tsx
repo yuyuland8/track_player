@@ -17,7 +17,12 @@ export default function ShareModal({ open, shareLink, memberCount, onClose, onTo
 
   // 生成高清二维码（SVG 转 data URL，保证放大清晰）
   useEffect(() => {
-    if (!open || !shareLink) return;
+    if (!open) {
+      setQrEnlarged(false);
+      setQrDataUrl("");
+      return;
+    }
+    if (!shareLink) return;
     let cancelled = false;
     QRCode.toDataURL(shareLink, { width: 400, margin: 2 })
       .then((url) => {
@@ -30,6 +35,10 @@ export default function ShareModal({ open, shareLink, memberCount, onClose, onTo
   if (!open) return null;
 
   const handleCopy = async () => {
+    if (!shareLink) {
+      onToast("生产模式登录后才能生成真实邀请链接");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(shareLink);
       setCopied(true);
@@ -49,6 +58,10 @@ export default function ShareModal({ open, shareLink, memberCount, onClose, onTo
   };
 
   const handleShare = async () => {
+    if (!shareLink) {
+      onToast("生产模式登录后才能邀请好友");
+      return;
+    }
     try {
       await navigator.share({
         title: "唱片跑道",
@@ -70,34 +83,48 @@ export default function ShareModal({ open, shareLink, memberCount, onClose, onTo
             跑道已就绪 · {memberCount} 人在线
           </div>
 
-          <h2 className={styles.title}>邀请好友一起跑</h2>
-          <p className={styles.subtitle}>扫码或分享链接，朋友就能加入你的跑道</p>
+          <h2 className={styles.title}>来陪我跑一段</h2>
+          <p className={styles.subtitle}>
+            {memberCount > 0
+              ? `已经有 ${memberCount} 位好友在跑道上了`
+              : "跑道刚开，等你第一个上来"}
+          </p>
 
           {/* 二维码 */}
           {qrDataUrl && (
-            <div className={styles.qrWrap} onClick={() => setQrEnlarged(true)}>
-              <img
-                className={styles.qrImg}
-                src={qrDataUrl}
-                alt="扫码加入跑道"
-              />
-              <span className={styles.qrHint}>点击放大</span>
+            <div className={styles.qrArea}>
+              <button
+                type="button"
+                className={styles.qrWrap}
+                aria-label="点击放大二维码"
+                onClick={() => setQrEnlarged(true)}
+              >
+                <img
+                  className={styles.qrImg}
+                  src={qrDataUrl}
+                  alt="扫码加入跑道"
+                />
+              </button>
+              <span className={styles.qrHint}>点击二维码放大</span>
             </div>
           )}
 
-          <div className={styles.linkBox}>
-            <span className={styles.linkText}>{shareLink}</span>
-            <button
-              className={`${styles.copyBtn} ${copied ? styles.copied : ""}`}
-              onClick={handleCopy}
-            >
-              {copied ? "已复制 ✓" : "复制"}
-            </button>
-          </div>
+          {shareLink && (
+            <div className={styles.linkBox}>
+              <span className={styles.linkText}>{shareLink}</span>
+              <button
+                className={`${styles.copyBtn} ${copied ? styles.copied : ""}`}
+                onClick={handleCopy}
+              >
+                {copied ? "已复制 ✓" : "复制"}
+              </button>
+            </div>
+          )}
 
           <p className={styles.hint}>
             朋友只会看到你和他们自己，不会看到其他陌生人
           </p>
+          <p className={styles.slogan}>这一首，陪你一起跑</p>
 
           <div className={styles.actions}>
             <button className={styles.btnSecondary} onClick={onClose}>

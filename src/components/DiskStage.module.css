@@ -259,6 +259,211 @@
   }
 }
 
+/* ---------- 粉丝萝卜皮肤（style="fan"） ---------- */
+/* 原尺寸萝卜以身体中心对齐专属赛道，避免碰到中孔和唱片外缘 */
+.stage[data-style="fan"] .hit {
+  width: 34px;
+  height: 40px;
+}
+
+.skin {
+  position: absolute;
+  left: 50%;
+  bottom: -2.5px;
+  width: 34px;
+  height: 41px;
+  margin-left: -17px;
+  object-fit: contain;
+  transform-origin: 50% 100%;
+  animation: radishHop calc(var(--step) * 1.15) ease-in-out infinite;
+}
+
+/* 没有脚，用脚底固定的挤压拉伸表达弹跳；不做 translate，避免离开赛道 */
+@keyframes radishHop {
+  0%   { transform: scale(1, 1); }
+  18%  { transform: scale(1.1, 0.9); }
+  46%  { transform: scale(0.93, 1.07); }
+  74%  { transform: scale(1.09, 0.91); }
+  100% { transform: scale(1, 1); }
+}
+
+.runner[data-moving="0"] .skin {
+  animation-play-state: paused;
+}
+
+/* 击掌／挥手：萝卜没有四肢，用更大的弹跳和摆动表达 */
+.runner[data-pose="hifive"] .skin {
+  animation: radishCheer 0.7s ease-out;
+}
+
+@keyframes radishCheer {
+  0%   { transform: scale(1.12, 0.88); }
+  40%  { transform: scale(0.9, 1.1); }
+  70%  { transform: scale(1.05, 0.95); }
+  100% { transform: scale(1, 1); }
+}
+
+.runner[data-pose="wave"] .skin {
+  animation: radishWave 0.45s ease-in-out infinite;
+}
+
+@keyframes radishWave {
+  0%, 100% { transform: rotate(-11deg); }
+  50%      { transform: rotate(11deg); }
+}
+
+/* ---------- L.O.V.E 接龙：字母从萝卜头顶冒出 ---------- */
+/* 用伪元素读 data-shout，引擎只写一个属性即可，不增加 DOM */
+.runner::before {
+  content: attr(data-shout);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 28px);
+  transform: translateX(-50%);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ff4d8d;
+  padding: 1px 7px;
+  border-radius: var(--corner-round);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(255, 77, 141, 0.28);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: shoutPop 0.3s ease-out;
+}
+
+/* 没有字母时整个气泡不渲染 */
+.runner:not([data-shout])::before,
+.runner[data-shout=""]::before {
+  content: none;
+}
+
+@keyframes shoutPop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.6); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.12); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* 喊的时候萝卜原地伸展，脚底始终留在赛道锚点 */
+.runner[data-shout]:not([data-shout=""]) .skin {
+  animation: radishShout 0.34s ease-out;
+}
+
+@keyframes radishShout {
+  0%   { transform: scale(1.08, 0.92); }
+  45%  { transform: scale(0.92, 1.1); }
+  100% { transform: scale(1, 1); }
+}
+
+/* ---------- 全场合唱：悬浮霓虹灯字 ---------- */
+.neon {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 96%;
+  padding: 0 3%;
+  box-sizing: border-box;
+  z-index: 96;
+  isolation: isolate;
+  pointer-events: none;
+  animation: neonIn 0.45s ease-out, neonFloat 2.4s ease-in-out 0.45s infinite;
+}
+
+.neon span,
+.neon b {
+  display: block;
+  flex: 0 0 auto;
+  font-size: 45px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: #fff;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 14px #ff4d8d,
+    0 0 26px #ff4d8d,
+    0 0 42px rgba(255, 77, 141, 0.7);
+}
+
+.neon b {
+  font-size: 36px;
+  color: #ffe9a8;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 16px #ffc53d,
+    0 0 30px #ffc53d;
+}
+
+/* 字体外围只保留轻量星点，不再显示扩散光圈 */
+.neon::after {
+  content: "";
+  position: absolute;
+  inset: -30px -14px;
+  z-index: -1;
+  background:
+    radial-gradient(circle, #fff 0 2px, #ff72ac 3px, transparent 6px) 3% 40% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ffd35c 3px, transparent 6px) 18% 4% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ff72ac 3px, transparent 6px) 42% 12% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ffd35c 3px, transparent 6px) 68% 0 / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ff72ac 3px, transparent 6px) 87% 18% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ffd35c 3px, transparent 6px) 98% 70% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ff72ac 3px, transparent 6px) 29% 96% / 12px 12px no-repeat,
+    radial-gradient(circle, #fff 0 2px, #ffd35c 3px, transparent 6px) 76% 92% / 12px 12px no-repeat;
+  filter: drop-shadow(0 0 6px rgba(255, 77, 141, 0.9));
+  animation: neonSparkles 1.2s ease-in-out infinite alternate;
+}
+
+/* 四个字母依次点亮，像招牌灯管一个个通电 */
+.neon span:nth-child(1) { animation: neonLit 1.6s ease-in-out infinite; }
+.neon span:nth-child(2) { animation: neonLit 1.6s ease-in-out 0.12s infinite; }
+.neon span:nth-child(3) { animation: neonLit 1.6s ease-in-out 0.24s infinite; }
+.neon span:nth-child(4) { animation: neonLit 1.6s ease-in-out 0.36s infinite; }
+
+.stage[data-playing="0"] .neon,
+.stage[data-playing="0"] .neon::after,
+.stage[data-playing="0"] .neon span,
+.stage[data-playing="0"] .neon b {
+  animation-play-state: paused;
+}
+
+@keyframes neonLit {
+  0%, 100% { opacity: 1; }
+  46%      { opacity: 0.72; }
+  50%      { opacity: 1; }
+}
+
+@keyframes neonIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.86); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes neonFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(-6px); }
+}
+
+@keyframes neonSparkles {
+  from { opacity: 0.42; transform: scale(0.96) rotate(-1deg); }
+  to   { opacity: 1; transform: scale(1.04) rotate(1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skin,
+  .neon,
+  .neon::after,
+  .neon span,
+  .neon b,
+  .runner::before {
+    animation: none;
+  }
+}
+
 /* 接力棒 */
 .baton {
   display: none;
@@ -307,6 +512,15 @@
   background: var(--brand-600);
   color: #fff;
   font-weight: 600;
+}
+
+/* 萝卜叶子占据头顶区域，名字移到身体左侧，避免互相遮挡 */
+.stage[data-style="fan"] .name,
+.stage[data-style="fan"] .nameMe {
+  left: -4px;
+  bottom: 55%;
+  transform: translateX(-100%);
+  margin-bottom: 0;
 }
 
 /* ---- 彩蛋效果 ---- */

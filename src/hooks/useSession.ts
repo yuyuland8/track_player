@@ -67,6 +67,8 @@ export function useSession(onToast: (msg: string) => void) {
                   baseHighFives: 0,
                   isMe: false,
                   isGuest: false,
+                  _online: newFriend.is_online,
+                  _onTrack: newFriend.is_on_track,
                 },
               ];
             });

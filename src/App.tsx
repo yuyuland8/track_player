@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, FileImage, MoreHorizontal, Share2, Users } from "lucide-react";
+import { ChevronLeft, FileImage, MoreHorizontal, Users } from "lucide-react";
 import { TRACKS } from "./data/tracks";
 import { BESTIE_ID, FRIENDS, MAX_ON_TRACK, ME, ME_ID } from "./data/friends";
 import { RECOMMENDS, RECOMMEND_BY_FRIEND } from "./data/recommends";
@@ -19,7 +19,6 @@ import FriendCard from "./components/FriendCard";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ReportModal, { type ReportData } from "./components/ReportModal";
 import AddGuestModal from "./components/AddGuestModal";
-import InviteModal from "./components/InviteModal";
 import RecommendModal from "./components/RecommendModal";
 import LoginModal from "./components/LoginModal";
 import ShareModal from "./components/ShareModal";
@@ -90,18 +89,28 @@ export default function App() {
   // ---- 名册：真实会话 > 我 + 预设好友 + 现场观众 ----
   const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
   const demoRoster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
+  const realMe = useMemo<Friend>(() => {
+    if (!session.currentUser) return ME;
+    return {
+      ...ME,
+      name: session.currentUser.name,
+      color: session.currentUser.color,
+    };
+  }, [session.currentUser]);
   const byId = useCallback(
     (id: string): Friend => {
       if (session.isRealSession) {
-        return session.visibleMembers.find((f) => f.id === id) ?? session.visibleMembers.find((f) => f.isMe) ?? ME;
+        if (id === ME_ID) return realMe;
+        return session.visibleMembers.find((f) => f.id === id)
+          ?? demoRoster.find((f) => f.id === id)
+          ?? realMe;
       }
       return demoRoster.find((f) => f.id === id) ?? ME;
     },
-    [demoRoster, session.isRealSession, session.visibleMembers],
+    [demoRoster, realMe, session.isRealSession, session.visibleMembers],
   );
 
   // ---- 陪跑名单 ----
-  const [companionOn, setCompanionOn] = useState(true);
   const [onlineIds, setOnlineIds] = useState<string[]>(() => [
     ...guests.map((g) => g.id),
     "ajie",
@@ -164,26 +173,6 @@ export default function App() {
     [showToast, byId],
   );
 
-  const handleToggleCompanion = () => {
-    if (companionOn) {
-      setCompanionOn(false);
-      const others = onTrackIds.filter((id) => id !== ME_ID);
-      others.forEach((id, i) => {
-        window.setTimeout(() => leaveTrack(id), i * 120);
-      });
-      showToast("已关闭陪跑，好友们挥手先撤啦");
-    } else {
-      setCompanionOn(true);
-      const candidates = onlineIds.filter(
-        (id) => !onTrackIds.includes(id) && !exitingIds.includes(id),
-      );
-      joinTrack(candidates, true);
-      showToast(
-        candidates.length > 0 ? "陪跑开启，好友们来了" : "陪跑已开启",
-      );
-    }
-  };
-
   /** 在线开关：只管在线状态；下线必然退出跑道（离线不可能在跑道上） */
   const handleToggleOnline = (id: string, online: boolean) => {
     const friend = byId(id);
@@ -209,10 +198,6 @@ export default function App() {
         showToast(`${friend.name}还没上线，先打开在线开关`);
         return;
       }
-      if (!companionOn) {
-        showToast("请先打开「陪跑」开关");
-        return;
-      }
       if (trackFull) {
         showToast(`跑道已满，最多 ${MAX_ON_TRACK} 人`);
         return;
@@ -224,27 +209,6 @@ export default function App() {
       leaveTrack(id);
       showToast(`${friend.name}下跑道了，仍然在线`);
     }
-  };
-
-  const handlePreset = (count: 2 | 4 | 8) => {
-    const targets = FRIENDS.slice(0, count - 1).map((f) => f.id);
-    setCompanionOn(true);
-    setOnlineIds((prev) => Array.from(new Set([...prev, ...targets])));
-    const toLeave = onTrackIds.filter(
-      (id) =>
-        id !== ME_ID &&
-        !targets.includes(id) &&
-        !byId(id).isGuest &&
-        !exitingIds.includes(id),
-    );
-    toLeave.forEach((id, i) => {
-      window.setTimeout(() => leaveTrack(id), i * 120);
-    });
-    joinTrack(
-      targets.filter((id) => !onTrackIds.includes(id)),
-      true,
-    );
-    showToast(`已切换为 ${count} 人陪跑场景`);
   };
 
   // ---- 会话统计 ----
@@ -290,7 +254,6 @@ export default function App() {
   const [cardFriendId, setCardFriendId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [addGuestOpen, setAddGuestOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<Friend | null>(null);
@@ -313,7 +276,6 @@ export default function App() {
   const handleAddGuest = (name: string, color: string, relation: string) => {
     const guest = addGuest(name, color, relation);
     setAddGuestOpen(false);
-    setCompanionOn(true);
     setOnlineIds((prev) => [...prev, guest.id]);
 
     // 满员时让最后一位预设好友让位，保证现场观众一定能上跑道
@@ -467,35 +429,11 @@ export default function App() {
       <div className={styles.secondaryRow}>
         <button
           type="button"
-          role="switch"
-          aria-checked={companionOn}
-          className={styles.companionToggle}
-          onClick={handleToggleCompanion}
-        >
-          <span
-            className={`${styles.toggleTrack} ${companionOn ? styles.toggleTrackOn : ""}`}
-          >
-            <span className={styles.toggleThumb} />
-          </span>
-          陪跑
-        </button>
-        {session.isRealSession && (
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 size={17} strokeWidth={1.8} />
-            邀请好友
-          </button>
-        )}
-        <button
-          type="button"
           className={styles.secondaryBtn}
           onClick={() => setPanelOpen(true)}
         >
           <Users size={17} strokeWidth={1.8} />
-          好友管理
+          我的酷跑团
         </button>
         <button
           type="button"
@@ -510,18 +448,31 @@ export default function App() {
       <FriendPanel
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
-        friends={FRIENDS}
-        guests={guests}
-        onlineIds={onlineIds}
-        onTrackIds={onTrackIds}
+        demoMode={!session.isRealSession}
+        friends={session.isRealSession ? session.visibleMembers : FRIENDS}
+        guests={session.isRealSession ? [] : guests}
+        onlineIds={
+          session.isRealSession
+            ? session.visibleMembers.filter((f) => f._online).map((f) => f.id)
+            : onlineIds
+        }
+        onTrackIds={
+          session.isRealSession
+            ? session.visibleMembers.filter((f) => f._onTrack).map((f) => f.id)
+            : onTrackIds
+        }
         trackFull={trackFull}
         onToggleOnline={handleToggleOnline}
         onToggleTrack={handleToggleTrack}
-        onPreset={handlePreset}
-        onInvite={() => setInviteOpen(true)}
+        onInvite={() => {
+          setPanelOpen(false);
+          setShareOpen(true);
+        }}
         onAddGuest={() => setAddGuestOpen(true)}
         onRemoveGuest={(f) => setGuestToRemove(f)}
-        recommendIds={RECOMMENDS.map((r) => r.friendId)}
+        recommendIds={
+          session.isRealSession ? [] : RECOMMENDS.map((r) => r.friendId)
+        }
         readRecIds={readRecIds}
         onOpenRecommend={handleOpenRecommend}
       />
@@ -546,16 +497,6 @@ export default function App() {
         open={addGuestOpen}
         onClose={() => setAddGuestOpen(false)}
         onSubmit={handleAddGuest}
-      />
-
-      <InviteModal
-        open={inviteOpen}
-        trackTitle={player.track.title}
-        artist={player.track.artist}
-        coverSrc={player.track.cover}
-        friendCount={Math.max(onTrackIds.length - 1, 0)}
-        onClose={() => setInviteOpen(false)}
-        onToast={showToast}
       />
 
       <FriendCard
