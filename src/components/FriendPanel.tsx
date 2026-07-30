@@ -1,4 +1,4 @@
-import { Mail, MailOpen, Sparkles, Trash2, UserPlus, Users } from "lucide-react";
+import { Mail, MailOpen, RotateCcw, Sparkles, Trash2, UserPlus, Users } from "lucide-react";
 import { HAS_TRACK_LIMIT, MAX_ON_TRACK } from "../data/friends";
 import type { Friend } from "../types";
 import Modal from "./Modal";
@@ -15,6 +15,8 @@ type Props = {
   trackFull: boolean;
   onToggleOnline: (id: string, online: boolean) => void;
   onToggleTrack: (id: string, onTrack: boolean) => void;
+  reinviteIds: string[];
+  onReinvite: (f: Friend) => void;
   onInvite: () => void;
   onAddGuest: () => void;
   onRemoveGuest: (f: Friend) => void;
@@ -36,6 +38,8 @@ export default function FriendPanel({
   trackFull,
   onToggleOnline,
   onToggleTrack,
+  reinviteIds,
+  onReinvite,
   onInvite,
   onAddGuest,
   onRemoveGuest,
@@ -49,6 +53,8 @@ export default function FriendPanel({
     const joinBlocked = !online || (!onTrack && trackFull);
     const hasRec = recommendIds.includes(f.id);
     const unread = hasRec && !readRecIds.includes(f.id);
+    const canReinvite =
+      !onTrack && (demoMode ? reinviteIds.includes(f.id) : true);
 
     return (
       <li key={f.id} className={styles.row}>
@@ -116,6 +122,17 @@ export default function FriendPanel({
             onClick={() => onRemoveGuest(f)}
           >
             <Trash2 size={15} strokeWidth={1.8} />
+          </button>
+        )}
+
+        {canReinvite && !f.isGuest && (
+          <button
+            type="button"
+            className={styles.reinvite}
+            onClick={() => onReinvite(f)}
+          >
+            <RotateCcw size={14} strokeWidth={2} />
+            重新邀请
           </button>
         )}
       </li>

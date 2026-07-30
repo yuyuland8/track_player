@@ -10,6 +10,7 @@ import {
   subscribeTrackFriends,
   subscribeHighFives,
   trackFriendToFriend,
+  updateFriendStatus,
   randomColor,
   getInviteUserIdFromURL,
   clearInviteFromURL,
@@ -207,6 +208,29 @@ export function useSession(onToast: (msg: string) => void) {
     [],
   );
 
+  const handleUpdateFriendStatus = useCallback(
+    async (
+      friendId: string,
+      updates: { is_online?: boolean; is_on_track?: boolean },
+    ) => {
+      const s = state as { phase: "active"; track: TrackRow };
+      if (s.phase !== "active" || !HAS_SUPABASE) return;
+      await updateFriendStatus(s.track.id, friendId, updates);
+      setVisibleMembers((prev) =>
+        prev.map((friend) =>
+          friend.id === friendId
+            ? {
+                ...friend,
+                _online: updates.is_online ?? friend._online,
+                _onTrack: updates.is_on_track ?? friend._onTrack,
+              }
+            : friend,
+        ),
+      );
+    },
+    [state],
+  );
+
   // ---- 记录击掌 ----
   const handleHighFiveAction = useCallback(
     async (from: Friend, to: Friend) => {
@@ -303,6 +327,7 @@ export function useSession(onToast: (msg: string) => void) {
     handleLogin,
     handleJoin,
     updateMyStatus,
+    updateFriendStatus: handleUpdateFriendStatus,
     handleHighFive: handleHighFiveAction,
     getShareLink,
     deviceToken: deviceToken.current,

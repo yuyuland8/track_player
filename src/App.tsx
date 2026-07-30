@@ -25,6 +25,11 @@ import ShareModal from "./components/ShareModal";
 import type { Friend, LyricLine } from "./types";
 import styles from "./App.module.css";
 
+const SHOWCASE_SHORTCUTS: Record<string, { time: number; label: string }[]> = {
+  "star-crossing-night": [{ time: 76, label: "彩蛋 1:16" }],
+  "mayday-loving": [{ time: 20, label: "彩蛋 0:20" }],
+};
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -131,6 +136,7 @@ export default function App() {
     ].slice(0, MAX_ON_TRACK);
   });
   const [exitingIds, setExitingIds] = useState<string[]>([]);
+  const [reinviteIds, setReinviteIds] = useState<string[]>([]);
 
   const runners = useMemo(() => onTrackIds.map(byId), [onTrackIds, byId]);
   const trackFull = onTrackIds.length >= (Number.isFinite(MAX_ON_TRACK) ? MAX_ON_TRACK : 8) && !session.isRealSession;
@@ -139,13 +145,24 @@ export default function App() {
   useEffect(() => {
     if (session.isRealSession) {
       const meMember = session.visibleMembers.find((f) => f.isMe);
-      const others = session.visibleMembers.filter((f) => !f.isMe && !exitingIds.includes(f.id));
+      const others = session.visibleMembers.filter(
+        (f) =>
+          !f.isMe &&
+          f._onTrack !== false &&
+          !exitingIds.includes(f.id) &&
+          !reinviteIds.includes(f.id),
+      );
       setOnTrackIds([
         meMember ? ME_ID : ME_ID,
         ...others.map((f) => f.id),
       ]);
     }
-  }, [session.isRealSession, session.visibleMembers, exitingIds]);
+  }, [
+    session.isRealSession,
+    session.visibleMembers,
+    exitingIds,
+    reinviteIds,
+  ]);
 
   const leaveTrack = useCallback((id: string) => {
     setExitingIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -158,6 +175,7 @@ export default function App() {
 
   const joinTrack = useCallback(
     (ids: string[], silent = false) => {
+      setReinviteIds((prev) => prev.filter((id) => !ids.includes(id)));
       setOnTrackIds((prev) => {
         const merged = [...prev];
         for (const id of ids) {
@@ -328,11 +346,57 @@ export default function App() {
 
   const handleKickConfirm = () => {
     if (!kickTarget) return;
-    leaveTrack(kickTarget.id);
-    setOnlineIds((prev) => prev.filter((x) => x !== kickTarget.id));
-    showToast(`已请${kickTarget.name}离开跑道`);
+    const target = kickTarget;
+    setReinviteIds((prev) =>
+      prev.includes(target.id) ? prev : [...prev, target.id],
+    );
+    leaveTrack(target.id);
+    setOnlineIds((prev) => prev.filter((x) => x !== target.id));
+    if (session.isRealSession) {
+      session
+        .updateFriendStatus(target.id, {
+          is_online: false,
+          is_on_track: false,
+        })
+        .catch(() => showToast("跑友状态保存失败，请稍后重试"));
+    }
+    showToast(`已请${target.name}离开跑道`);
     setKickTarget(null);
     setCardFriendId(null);
+  };
+
+  const handleReinvite = (friend: Friend) => {
+    if (exitingIds.includes(friend.id)) {
+      showToast(`${friend.name}还在退场，请稍等一下`);
+      return;
+    }
+    if (trackFull) {
+      showToast(`跑道已满，最多 ${MAX_ON_TRACK} 人`);
+      return;
+    }
+
+    if (session.isRealSession) {
+      session
+        .updateFriendStatus(friend.id, {
+          is_online: true,
+          is_on_track: true,
+        })
+        .then(() => {
+          setReinviteIds((prev) => prev.filter((id) => id !== friend.id));
+          setOnlineIds((prev) =>
+            prev.includes(friend.id) ? prev : [...prev, friend.id],
+          );
+          showToast(`${friend.name}已重新加入跑道`);
+        })
+        .catch(() => showToast("重新邀请失败，请稍后重试"));
+      return;
+    }
+
+    setOnlineIds((prev) =>
+      prev.includes(friend.id) ? prev : [...prev, friend.id],
+    );
+    joinTrack([friend.id], true);
+    showToast(`${friend.name}已重新加入跑道`);
   };
 
   const cardFriend = cardFriendId ? byId(cardFriendId) : null;
@@ -417,6 +481,11 @@ export default function App() {
         time={player.time}
         duration={player.duration}
         onSeek={player.seek}
+        shortcuts={SHOWCASE_SHORTCUTS[player.track.id]}
+        onShortcut={(target) => {
+          player.seek(target);
+          player.play();
+        }}
       />
 
       <Controls
@@ -464,6 +533,8 @@ export default function App() {
         trackFull={trackFull}
         onToggleOnline={handleToggleOnline}
         onToggleTrack={handleToggleTrack}
+        reinviteIds={reinviteIds}
+        onReinvite={handleReinvite}
         onInvite={() => {
           setPanelOpen(false);
           setShareOpen(true);

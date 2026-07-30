@@ -6,9 +6,17 @@ type Props = {
   time: number;
   duration: number;
   onSeek: (target: number) => void;
+  shortcuts?: { time: number; label: string }[];
+  onShortcut?: (target: number) => void;
 };
 
-export default function ProgressBar({ time, duration, onSeek }: Props) {
+export default function ProgressBar({
+  time,
+  duration,
+  onSeek,
+  shortcuts = [],
+  onShortcut,
+}: Props) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const [dragRatio, setDragRatio] = useState<number | null>(null);
 
@@ -38,6 +46,23 @@ export default function ProgressBar({ time, duration, onSeek }: Props) {
 
   return (
     <div className={styles.wrap}>
+      {shortcuts.length > 0 && (
+        <div className={styles.shortcutRail}>
+          {shortcuts.map((shortcut) => (
+            <button
+              key={`${shortcut.time}-${shortcut.label}`}
+              type="button"
+              className={styles.shortcut}
+              style={{
+                left: `${Math.min(shortcut.time / Math.max(duration, 1), 1) * 100}%`,
+              }}
+              aria-label={`跳转并播放${shortcut.label}`}
+              title={shortcut.label}
+              onClick={() => onShortcut?.(shortcut.time)}
+            />
+          ))}
+        </div>
+      )}
       <div
         className={styles.touch}
         role="slider"

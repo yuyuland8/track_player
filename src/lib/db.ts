@@ -189,16 +189,21 @@ export async function updateFriendStatus(
   if (!supabase) return;
 
   // 找到对应记录
-  const { data: friend } = await supabase
+  const { data: friend, error: findError } = await supabase
     .from("track_friends")
     .select("id")
     .eq("track_id", trackId)
     .eq("user_id", friendUserId)
     .maybeSingle();
 
-  if (friend) {
-    await supabase.from("track_friends").update(updates).eq("id", friend.id);
-  }
+  if (findError) throw findError;
+  if (!friend) throw new Error("找不到对应的跑友关系");
+
+  const { error: updateError } = await supabase
+    .from("track_friends")
+    .update(updates)
+    .eq("id", friend.id);
+  if (updateError) throw updateError;
 }
 
 // ---- 击掌 ----

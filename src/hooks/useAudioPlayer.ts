@@ -102,6 +102,15 @@ export function useAudioPlayer({ tracks, onError }: Options) {
     }
   }, []);
 
+  const play = useCallback(() => {
+    const audio = audioRef.current!;
+    wasPlayingRef.current = true;
+    audio.play().catch(() => {
+      setIsPlaying(false);
+      onErrorRef.current("播放失败，请再点一次播放");
+    });
+  }, []);
+
   const step = useCallback(
     (delta: number) => {
       const audio = audioRef.current!;
@@ -141,6 +150,7 @@ export function useAudioPlayer({ tracks, onError }: Options) {
     isPlaying,
     time,
     duration,
+    play,
     toggle,
     next,
     prev,
