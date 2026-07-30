@@ -12,6 +12,7 @@ type Props = {
   guests: Friend[];
   onlineIds: string[];
   onTrackIds: string[];
+  exitingIds: string[];
   trackFull: boolean;
   onToggleOnline: (id: string, online: boolean) => void;
   onToggleTrack: (id: string, onTrack: boolean) => void;
@@ -35,6 +36,7 @@ export default function FriendPanel({
   guests,
   onlineIds,
   onTrackIds,
+  exitingIds,
   trackFull,
   onToggleOnline,
   onToggleTrack,
@@ -54,7 +56,10 @@ export default function FriendPanel({
     const hasRec = recommendIds.includes(f.id);
     const unread = hasRec && !readRecIds.includes(f.id);
     const canReinvite =
-      !demoMode && !onTrack && reinviteIds.includes(f.id);
+      !demoMode &&
+      !onTrack &&
+      !exitingIds.includes(f.id) &&
+      reinviteIds.includes(f.id);
 
     return (
       <li key={f.id} className={styles.row}>

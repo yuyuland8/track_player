@@ -148,9 +148,8 @@ export default function App() {
       const others = session.visibleMembers.filter(
         (f) =>
           !f.isMe &&
-          f._onTrack !== false &&
-          !exitingIds.includes(f.id) &&
-          !reinviteIds.includes(f.id),
+          (exitingIds.includes(f.id) ||
+            (f._onTrack !== false && !reinviteIds.includes(f.id))),
       );
       setOnTrackIds([
         meMember ? ME_ID : ME_ID,
@@ -530,6 +529,7 @@ export default function App() {
             ? session.visibleMembers.filter((f) => f._onTrack).map((f) => f.id)
             : onTrackIds
         }
+        exitingIds={exitingIds}
         trackFull={trackFull}
         onToggleOnline={handleToggleOnline}
         onToggleTrack={handleToggleTrack}
