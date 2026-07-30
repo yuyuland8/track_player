@@ -241,8 +241,11 @@ export default function DiskStage({
       const dt = Math.min((now - last) / 1000, dtCap);
       last = now;
 
-      const { track: tk, isPlaying: playing, reducedMotion: rm } =
-        propsRef.current;
+      const {
+        track: tk,
+        isPlaying: playing,
+        reducedMotion: rm,
+      } = propsRef.current;
       const tr = transientRef.current;
       const sims = simsRef.current;
       tr.clock += dt;
@@ -288,6 +291,9 @@ export default function DiskStage({
       }
 
       const activeCue = tk.sceneCues.find((c) => t >= c.start && t <= c.end);
+      const activeLoveCallCue = tk.sceneCues.find(
+        (c) => c.type === "loveCall" && t >= c.start - 0.5 && t <= c.end,
+      );
       const meetCue = tk.sceneCues.find((c) => c.type === "firstMeet");
       const inMeetPre =
         tk.style === "duo" &&
@@ -295,11 +301,20 @@ export default function DiskStage({
         t >= meetCue.start - 3 &&
         t < meetCue.start;
       const inMeet =
-        tk.style === "duo" && !!meetCue && t >= meetCue.start && t <= meetCue.end;
+        tk.style === "duo" &&
+        !!meetCue &&
+        t >= meetCue.start &&
+        t <= meetCue.end;
 
       // 速度：BPM × 个人 pace × 场景系数
       const styleMul =
-        tk.style === "walk" ? 0.55 : tk.style === "duo" ? 0.8 : tk.style === "fan" ? 0.9 : 1;
+        tk.style === "walk"
+          ? 0.55
+          : tk.style === "duo"
+            ? 0.8
+            : tk.style === "fan"
+              ? 0.9
+              : 1;
       const baseW = ((tk.bpm * 0.09 * styleMul) / 180) * Math.PI;
       const motionMul = rm ? 0.35 : 1;
 
@@ -391,9 +406,9 @@ export default function DiskStage({
               follower.boostUntil = 0;
               leader.boost = 1.35;
               leader.boostUntil = clock + 2.5;
-              const fx = cx + (cx * LANE_RX[1]) * Math.cos(leader.theta);
+              const fx = cx + cx * LANE_RX[1] * Math.cos(leader.theta);
               const fy =
-                cy + (cy * LANE_RX[1] * RY_RATIO) * Math.sin(leader.theta) - 46;
+                cy + cy * LANE_RX[1] * RY_RATIO * Math.sin(leader.theta) - 46;
               if (!rm) spawnFx("hifive", fx, fy, 900);
               spawnFx("relay", fx, fy - 14, 1800);
               propsRef.current.onRelay();
@@ -412,17 +427,16 @@ export default function DiskStage({
       // 左右手 cue（青春修炼手册）
       let handPose = "";
       if (activeCue?.type === "leftRightMove") {
-        handPose =
-          t < (activeCue.start + activeCue.end) / 2 ? "left" : "right";
+        handPose = t < (activeCue.start + activeCue.end) / 2 ? "left" : "right";
       }
 
       // ---- L.O.V.E 合唱：前半段选 4 只萝卜依次喊字母，后半段整体霓虹字 ----
       let shoutMap: Map<string, string> | null = null;
-      if (activeCue?.type === "loveCall") {
+      if (activeLoveCallCue) {
         const runnable = [...sims.values()].filter((sm) => sm.phase === "run");
         if (runnable.length >= 4) {
-          if (tr.love.cueId !== activeCue.id) {
-            tr.love.cueId = activeCue.id;
+          if (tr.love.cueId !== activeLoveCallCue.id) {
+            tr.love.cueId = activeLoveCallCue.id;
             const pool = runnable.map((sm) => sm.friend.id);
             for (let i = pool.length - 1; i > 0; i--) {
               const j = Math.floor(Math.random() * (i + 1));
@@ -430,12 +444,16 @@ export default function DiskStage({
             }
             tr.love.picked = pool.slice(0, 4);
           }
-          const per = (activeCue.end - activeCue.start) / 4;
+          const per = (activeLoveCallCue.end - activeLoveCallCue.start) / 4;
           shoutMap = new Map();
           tr.love.picked.forEach((pid, i) => {
-            const at = activeCue.start + i * per;
-            // 每个发音严格对应一个萝卜和一个字母，不与下一个字母重叠
-            if (t >= at && t < at + per) shoutMap!.set(pid, "LOVE"[i]);
+            const leads = [0.5, 0.5, 0.2, 0];
+            const lead = leads[i];
+            const at = activeLoveCallCue.start + i * per - lead;
+            const nextLead = leads[i + 1] ?? 0;
+            const until = activeLoveCallCue.start + (i + 1) * per - nextLead;
+            // L/O 提前 0.5 秒，V 提前 0.2 秒；后一个字母出现时前一个立即收起。
+            if (t >= at && t < until) shoutMap!.set(pid, "LOVE"[i]);
           });
         }
       } else if (tr.love.cueId) {
@@ -455,9 +473,7 @@ export default function DiskStage({
         if (!el) continue;
 
         const isFeatured =
-          tk.style !== "duo" ||
-          sim === meSim ||
-          sim === buddySim;
+          tk.style !== "duo" || sim === meSim || sim === buddySim;
         const dim = tk.style === "duo" && !isFeatured;
         const effLane =
           tk.style === "duo"
@@ -503,11 +519,7 @@ export default function DiskStage({
             propsRef.current.onExitDone(id);
             continue;
           }
-        } else if (
-          playing &&
-          clock >= sim.freezeUntil &&
-          !meetPair.has(id)
-        ) {
+        } else if (playing && clock >= sim.freezeUntil && !meetPair.has(id)) {
           advance = speed * dt;
         }
 
@@ -592,7 +604,8 @@ export default function DiskStage({
             ) {
               continue;
             }
-            if (clock < a.sim.freezeUntil || clock < b.sim.freezeUntil) continue;
+            if (clock < a.sim.freezeUntil || clock < b.sim.freezeUntil)
+              continue;
             const dist = Math.hypot(a.x - b.x, a.y - b.y);
             if (dist > HIFIVE_DIST) continue;
             const key = [a.sim.friend.id, b.sim.friend.id].sort().join("|");
@@ -602,12 +615,7 @@ export default function DiskStage({
             a.sim.freezeUntil = clock + 0.7;
             b.sim.freezeUntil = clock + 0.7;
             if (!rm) {
-              spawnFx(
-                "hifive",
-                (a.x + b.x) / 2,
-                (a.y + b.y) / 2 - 34,
-                900,
-              );
+              spawnFx("hifive", (a.x + b.x) / 2, (a.y + b.y) / 2 - 34, 900);
             }
             propsRef.current.onHighFive(a.sim.friend, b.sim.friend);
           }
@@ -706,12 +714,24 @@ type RunnerViewProps = {
   refCb: (el: HTMLDivElement | null) => void;
 };
 
-function RunnerView({ friend, showHat, skinSrc, stepDur, onClick, refCb }: RunnerViewProps) {
+function RunnerView({
+  friend,
+  showHat,
+  skinSrc,
+  stepDur,
+  onClick,
+  refCb,
+}: RunnerViewProps) {
   return (
     <div
       ref={refCb}
       className={styles.runner}
-      style={{ "--step": `${stepDur.toFixed(2)}s`, "--suit": friend.color } as CSSProperties}
+      style={
+        {
+          "--step": `${stepDur.toFixed(2)}s`,
+          "--suit": friend.color,
+        } as CSSProperties
+      }
       data-pose=""
       data-moving="0"
       data-baton="0"
@@ -736,9 +756,30 @@ function RunnerView({ friend, showHat, skinSrc, stepDur, onClick, refCb }: Runne
               height="37"
               aria-hidden="true"
             >
-              <rect className={`${styles.limb} ${styles.armBack}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
-              <rect className={`${styles.limb} ${styles.legBack}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
-              <rect className={styles.torso} x="12.5" y="17" width="11" height="16" rx="5" />
+              <rect
+                className={`${styles.limb} ${styles.armBack}`}
+                x="16.4"
+                y="19"
+                width="3"
+                height="11"
+                rx="1.5"
+              />
+              <rect
+                className={`${styles.limb} ${styles.legBack}`}
+                x="16.4"
+                y="31"
+                width="3.4"
+                height="13"
+                rx="1.7"
+              />
+              <rect
+                className={styles.torso}
+                x="12.5"
+                y="17"
+                width="11"
+                height="16"
+                rx="5"
+              />
               <g className={styles.headG}>
                 <circle className={styles.head} cx="18" cy="10" r="6" />
                 <path
@@ -754,9 +795,30 @@ function RunnerView({ friend, showHat, skinSrc, stepDur, onClick, refCb }: Runne
                   </g>
                 )}
               </g>
-              <rect className={`${styles.limb} ${styles.legFront}`} x="16.4" y="31" width="3.4" height="13" rx="1.7" />
-              <rect className={`${styles.limb} ${styles.armFront}`} x="16.4" y="19" width="3" height="11" rx="1.5" />
-              <rect className={styles.baton} x="19.5" y="27.5" width="11" height="3" rx="1.5" />
+              <rect
+                className={`${styles.limb} ${styles.legFront}`}
+                x="16.4"
+                y="31"
+                width="3.4"
+                height="13"
+                rx="1.7"
+              />
+              <rect
+                className={`${styles.limb} ${styles.armFront}`}
+                x="16.4"
+                y="19"
+                width="3"
+                height="11"
+                rx="1.5"
+              />
+              <rect
+                className={styles.baton}
+                x="19.5"
+                y="27.5"
+                width="11"
+                height="3"
+                rx="1.5"
+              />
             </svg>
           </span>
         )}
@@ -794,7 +856,12 @@ function FxView({ fx }: { fx: FX }) {
   }
   return (
     <div className={styles.fxHifive} style={style} aria-hidden="true">
-      <span /><span /><span /><span /><span /><span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
+      <span />
     </div>
   );
 }
