@@ -1,0 +1,85 @@
+:root {
+  /* 品牌蓝（酷狗冰蓝方向） */
+  --brand-500: #31b5ed;
+  --brand-600: #169af3;
+  --brand-10: rgba(22, 154, 243, 0.1);
+  --bg-gradient: linear-gradient(180deg, #c9e5fd 0%, #eff6ff 48%, #f0fbfd 100%);
+
+  /* 文字层级（Text-500 → Text-100） */
+  --text-500: #17181a;
+  --text-400: rgba(0, 0, 0, 0.7);
+  --text-300: rgba(0, 0, 0, 0.5);
+  --text-200: rgba(0, 0, 0, 0.2);
+  --text-100: rgba(0, 0, 0, 0.15);
+  --divider: rgba(0, 0, 0, 0.05);
+
+  --mask: #ffffff;
+  --button-mask: #e6e9eb;
+  --red-heart: #ff4d4d;
+
+  /* 圆角 */
+  --corner-s: 10px;
+  --corner-default: 20px;
+  --corner-m: 30px;
+  --corner-l: 40px;
+  --corner-round: 1000px;
+
+  /* 间距 */
+  --space-100: 4px;
+  --space-200: 8px;
+  --space-300: 12px;
+  --space-400: 16px;
+  --space-500: 20px;
+  --space-600: 24px;
+  --space-800: 32px;
+
+  --font-primary: "PingFang SC", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", "Segoe UI", sans-serif;
+
+  --shadow-cover: 0 0 24px rgba(0, 0, 0, 0.12);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-primary);
+  color: var(--text-500);
+  background: #dceafd;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--bg-gradient);
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}

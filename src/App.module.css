@@ -1,0 +1,205 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--space-400) + var(--safe-bottom));
+  overflow: hidden;
+}
+
+/* 顶部栏 */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-200))
+    var(--space-200) 0;
+}
+
+.topBtn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-500);
+  border-radius: 50%;
+}
+
+.topBtn:active {
+  background: var(--divider);
+}
+
+.topTitle {
+  margin: 0;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--text-500);
+}
+
+/* 陪跑摘要胶囊 */
+.summaryRow {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-100) var(--space-500) var(--space-300);
+}
+
+.summaryPill {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 6px 14px;
+  border-radius: var(--corner-round);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--text-400);
+}
+
+/* 歌名歌手 */
+.trackInfo {
+  text-align: center;
+  padding: var(--space-200) var(--space-500) var(--space-100);
+}
+
+.trackTitle {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  color: var(--text-500);
+}
+
+.trackArtist {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 17px;
+  color: var(--text-300);
+}
+
+/* 次级操作行 */
+.secondaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-300);
+  padding: var(--space-100) var(--space-500) 0;
+}
+
+.companionToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-200);
+  min-height: 44px;
+  padding: 0 var(--space-300);
+  border-radius: var(--corner-round);
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-400);
+}
+
+.toggleTrack {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--corner-round);
+  background: var(--text-100);
+  transition: background 0.2s ease-out;
+}
+
+.toggleTrackOn {
+  background: var(--brand-600);
+}
+
+.toggleThumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.2s ease-out;
+}
+
+.toggleTrackOn .toggleThumb {
+  left: 19px;
+}
+
+.secondaryBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 var(--space-300);
+  border-radius: var(--corner-round);
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-400);
+}
+
+.secondaryBtn:active,
+.companionToggle:active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Toast */
+.toastWrap {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-200);
+  pointer-events: none;
+  width: max-content;
+  max-width: calc(100vw - 40px);
+}
+
+.toast {
+  background: rgba(23, 24, 26, 0.82);
+  color: #fff;
+  font-size: 13px;
+  line-height: 18px;
+  padding: 9px 18px;
+  border-radius: var(--corner-round);
+  animation: toastIn 0.25s ease-out;
+  text-align: center;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+/* 375 × 812 适配：整体略收紧 */
+@media (max-width: 380px) {
+  .trackTitle {
+    font-size: 20px;
+  }
+
+  .secondaryRow {
+    gap: var(--space-200);
+  }
+
+  .secondaryBtn,
+  .companionToggle {
+    padding: 0 var(--space-200);
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,482 @@
+.stage {
+  position: relative;
+  width: min(82%, 330px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+/* 封面：唱片透明中孔下层 */
+.cover {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42.5%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--button-mask);
+  box-shadow: var(--shadow-cover);
+  z-index: 1;
+  animation: coverIn 0.5s ease-out;
+}
+
+@keyframes coverIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* 唱片外圈：独立慢速自转层，与人物公转无关 */
+.diskSpin {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  animation: diskSpin 42s linear infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+
+.stage[data-playing="1"] .diskSpin {
+  animation-play-state: running;
+}
+
+.disk {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes diskSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 人物公转层 */
+.runnerLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.runner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+  --dir: 1;
+  --amp: 36deg;
+}
+
+.stage[data-style="walk"] .runner {
+  --amp: 19deg;
+}
+
+.hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: flex-end;
+  padding: 2px;
+}
+
+.flip {
+  display: block;
+  transform: scaleX(var(--dir));
+}
+
+.figure {
+  display: block;
+  overflow: visible;
+}
+
+.head {
+  fill: #ffd9b8;
+}
+
+.hair {
+  fill: #4a3f3a;
+}
+
+.torso {
+  fill: var(--suit);
+}
+
+.limb {
+  transform-box: fill-box;
+  transform-origin: center top;
+}
+
+.armBack,
+.armFront {
+  fill: var(--suit);
+  filter: brightness(0.86);
+}
+
+.armFront {
+  filter: none;
+}
+
+.legBack,
+.legFront {
+  fill: #3a4256;
+}
+
+.legBack,
+.armBack {
+  opacity: 0.72;
+}
+
+/* 步伐摆动：频率与移动速度同步（--step 由 BPM 决定） */
+.legFront {
+  animation: swingA var(--step) linear infinite;
+}
+
+.legBack {
+  animation: swingB var(--step) linear infinite;
+}
+
+.armFront {
+  animation: swingB var(--step) linear infinite;
+}
+
+.armBack {
+  animation: swingA var(--step) linear infinite;
+}
+
+@keyframes swingA {
+  0%,
+  100% {
+    transform: rotate(var(--amp));
+  }
+  50% {
+    transform: rotate(calc(var(--amp) * -0.9));
+  }
+}
+
+@keyframes swingB {
+  0%,
+  100% {
+    transform: rotate(calc(var(--amp) * -0.9));
+  }
+  50% {
+    transform: rotate(var(--amp));
+  }
+}
+
+.runner[data-moving="0"] .limb {
+  animation-play-state: paused;
+}
+
+/* 姿态：举左手 / 举右手 */
+.runner[data-pose="left"] .armBack {
+  animation: none;
+  transform: rotate(-168deg);
+}
+
+.runner[data-pose="right"] .armFront {
+  animation: none;
+  transform: rotate(168deg);
+}
+
+/* 击掌 */
+.runner[data-pose="hifive"] .armFront {
+  animation: none;
+  transform: rotate(158deg);
+}
+
+.runner[data-pose="hifive"] .legFront {
+  animation: none;
+  transform: rotate(10deg);
+}
+
+.runner[data-pose="hifive"] .legBack {
+  animation: none;
+  transform: rotate(-10deg);
+}
+
+/* 相遇对视：停步抬头 */
+.runner[data-pose="gaze"] .limb {
+  animation: none;
+  transform: rotate(0deg);
+}
+
+.runner[data-pose="gaze"] .legFront {
+  transform: rotate(5deg);
+}
+
+.runner[data-pose="gaze"] .legBack {
+  transform: rotate(-5deg);
+}
+
+.runner[data-pose="gaze"] .headG {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transform: rotate(-14deg);
+}
+
+/* 退场挥手 */
+.runner[data-pose="wave"] .limb {
+  animation: none;
+}
+
+.runner[data-pose="wave"] .armFront {
+  animation: waveArm 0.45s ease-in-out infinite;
+}
+
+@keyframes waveArm {
+  0%,
+  100% {
+    transform: rotate(150deg);
+  }
+  50% {
+    transform: rotate(185deg);
+  }
+}
+
+/* 接力棒 */
+.baton {
+  display: none;
+  fill: #ff8f3d;
+  stroke: #e8762a;
+  stroke-width: 0.6;
+}
+
+.runner[data-baton="1"] .baton {
+  display: block;
+}
+
+/* 毕业帽 */
+.hat rect,
+.hat polygon {
+  fill: #2f3a56;
+}
+
+.hat line {
+  stroke: #ffc53d;
+  stroke-width: 1.2;
+}
+
+.hat circle {
+  fill: #ffc53d;
+}
+
+/* 名字标签 */
+.name,
+.nameMe {
+  font-size: 10px;
+  line-height: 14px;
+  padding: 0 6px;
+  border-radius: var(--corner-round);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text-400);
+  white-space: nowrap;
+}
+
+.nameMe {
+  background: var(--brand-600);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---- 彩蛋效果 ---- */
+.fxHifive {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  z-index: 90;
+  pointer-events: none;
+}
+
+.fxHifive span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand-500);
+  animation: burst 0.85s ease-out forwards;
+}
+
+.fxHifive span:nth-child(1) { --bx: 16px; --by: -12px; background: #31b5ed; }
+.fxHifive span:nth-child(2) { --bx: -16px; --by: -10px; background: #ffc53d; }
+.fxHifive span:nth-child(3) { --bx: 10px; --by: -20px; background: #f473b9; }
+.fxHifive span:nth-child(4) { --bx: -9px; --by: -21px; background: #2ec4b6; }
+.fxHifive span:nth-child(5) { --bx: 20px; --by: 2px; background: #8b7cf6; }
+.fxHifive span:nth-child(6) { --bx: -20px; --by: 3px; background: #ff8a5c; }
+
+@keyframes burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--bx), var(--by)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+.fxRelay {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 95;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand-600);
+  padding: 3px 10px;
+  border-radius: var(--corner-round);
+  white-space: nowrap;
+  animation: floatUp 1.7s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    margin-top: 6px;
+  }
+  15%,
+  75% {
+    opacity: 1;
+    margin-top: 0;
+  }
+  100% {
+    opacity: 0;
+    margin-top: -14px;
+  }
+}
+
+.fxHeart {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 95;
+  pointer-events: none;
+}
+
+.heartPath {
+  fill: rgba(255, 77, 77, 0.16);
+  stroke: var(--red-heart);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 140;
+  animation: heartDraw 0.9s ease-out forwards, heartBeat 1.2s ease-in-out 0.9s infinite;
+  transform-origin: center;
+}
+
+@keyframes heartDraw {
+  from {
+    stroke-dashoffset: 140;
+    fill-opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+}
+
+@keyframes heartBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.1);
+  }
+}
+
+.sparkA,
+.sparkB,
+.sparkC {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #ffd76a;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: twinkle 1.1s ease-in-out infinite;
+}
+
+.sparkA { left: -12px; top: 2px; }
+.sparkB { right: -12px; top: -4px; animation-delay: 0.3s; }
+.sparkC { left: 8px; top: -14px; animation-delay: 0.6s; }
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.7) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(20deg);
+  }
+}
+
+/* 纸飞机（青春修炼手册装饰） */
+.planeA,
+.planeB {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.planeA {
+  left: 6%;
+  top: 14%;
+  animation: planeFloat 6s ease-in-out infinite;
+}
+
+.planeB {
+  right: 5%;
+  top: 62%;
+  animation: planeFloat 7.5s ease-in-out 1.2s infinite reverse;
+}
+
+@keyframes planeFloat {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-8deg);
+  }
+  50% {
+    transform: translate(14px, -12px) rotate(10deg);
+  }
+}
+
+.stage[data-playing="0"] .planeA,
+.stage[data-playing="0"] .planeB {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diskSpin {
+    animation: none;
+  }
+
+  .planeA,
+  .planeB {
+    animation: none;
+  }
+
+  .fxHifive span {
+    animation-duration: 0.4s;
+  }
+
+  .heartPath {
+    animation: heartDraw 0.4s ease-out forwards;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "preview",
+      "runtimeExecutable": "./scripts/run-npm.sh",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    },
+    {
+      "name": "dev",
+      "runtimeExecutable": "./scripts/run-npm.sh",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    }
+  ]
+}

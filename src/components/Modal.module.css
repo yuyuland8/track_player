@@ -1,0 +1,88 @@
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 32, 51, 0.42);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: maskIn 0.2s ease-out;
+}
+
+@keyframes maskIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  max-height: 82dvh;
+  overflow-y: auto;
+  background: var(--mask);
+  border-radius: var(--corner-m) var(--corner-m) 0 0;
+  padding: var(--space-500) var(--space-500)
+    calc(var(--space-500) + var(--safe-bottom));
+  animation: sheetIn 0.25s ease-out;
+}
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.center {
+  position: relative;
+  width: min(calc(100% - 48px), 340px);
+  max-height: 84dvh;
+  overflow-y: auto;
+  background: var(--mask);
+  border-radius: var(--corner-default);
+  padding: var(--space-500);
+  margin: auto;
+  animation: centerIn 0.22s ease-out;
+}
+
+@keyframes centerIn {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-300);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mask,
+  .sheet,
+  .center {
+    animation: none;
+  }
+}

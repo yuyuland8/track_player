@@ -1,0 +1,38 @@
+.title {
+  margin: 0 24px 8px 0;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--text-500);
+}
+
+.desc {
+  margin: 0 0 var(--space-500);
+  font-size: 14px;
+  line-height: 19px;
+  color: var(--text-400);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-300);
+}
+
+.cancel,
+.confirm {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--corner-round);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cancel {
+  background: var(--button-mask);
+  color: var(--text-400);
+}
+
+.confirm {
+  background: var(--red-heart);
+  color: #fff;
+}

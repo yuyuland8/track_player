@@ -1,0 +1,44 @@
+.wrap {
+  padding: 0 var(--space-500);
+}
+
+.touch {
+  padding: 16px 0 8px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.rail {
+  height: 3px;
+  border-radius: var(--corner-round);
+  background: var(--text-100);
+}
+
+.fill {
+  position: relative;
+  height: 100%;
+  border-radius: var(--corner-round);
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-600));
+}
+
+.knob {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--brand-600);
+  box-shadow: 0 1px 4px rgba(22, 154, 243, 0.35);
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-300);
+  font-variant-numeric: tabular-nums;
+}
