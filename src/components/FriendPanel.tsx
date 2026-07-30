@@ -103,7 +103,7 @@ export default function FriendPanel({
               aria-disabled={joinBlocked}
               onClick={() => onToggleTrack(f.id, !onTrack)}
             >
-              {onTrack ? "在跑道" : "加入"}
+              {onTrack ? "请离" : "加入"}
             </button>
 
             <button
@@ -153,7 +153,7 @@ export default function FriendPanel({
       </div>
       <p className={styles.hint}>
         {demoMode
-          ? `左边开关控制在线状态，右边「加入」控制是否上跑道。离线会自动退出跑道，${
+          ? `最右侧开关控制在线状态，「请离 / 加入」控制是否上跑道。离线会自动退出跑道，${
               HAS_TRACK_LIMIT
                 ? `跑道最多 ${MAX_ON_TRACK} 人（含你自己）。`
                 : "当前不限跑道人数。"
