@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, FileImage, MoreHorizontal, Users } from "lucide-react";
+import { ChevronLeft, FileImage, MoreHorizontal, Share2, Users } from "lucide-react";
 import { TRACKS } from "./data/tracks";
 import { BESTIE_ID, FRIENDS, MAX_ON_TRACK, ME, ME_ID } from "./data/friends";
 import { RECOMMENDS, RECOMMEND_BY_FRIEND } from "./data/recommends";
@@ -7,6 +7,8 @@ import { parseLrc } from "./utils/lrc";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useToasts } from "./hooks/useToasts";
 import { useGuests } from "./hooks/useGuests";
+import { useSession } from "./hooks/useSession";
+import { HAS_SUPABASE } from "./lib/supabase";
 import DiskStage from "./components/DiskStage";
 import Lyrics from "./components/Lyrics";
 import ProgressBar from "./components/ProgressBar";
@@ -18,6 +20,9 @@ import ReportModal, { type ReportData } from "./components/ReportModal";
 import AddGuestModal from "./components/AddGuestModal";
 import InviteModal from "./components/InviteModal";
 import RecommendModal from "./components/RecommendModal";
+import CreateSessionModal from "./components/CreateSessionModal";
+import JoinSessionModal from "./components/JoinSessionModal";
+import ShareModal from "./components/ShareModal";
 import type { Friend, LyricLine } from "./types";
 import styles from "./App.module.css";
 
@@ -65,17 +70,27 @@ export default function App() {
     };
   }, [player.track, lyricsMap, lyricsFailed, showToast]);
 
-  // ---- 名册：我 + 预设好友 + 现场观众（观众持久化在 localStorage）----
+  // ---- 真实会话 (Supabase) ----
+  const session = useSession(showToast);
+
+  // ---- Demo 模式下首次进入弹窗 ----
+  const [showCreateModal, setShowCreateModal] = useState(true);
+
+  // ---- 名册：真实会话 > 我 + 预设好友 + 现场观众 ----
   const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
-  const roster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
+  const demoRoster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
   const byId = useCallback(
-    (id: string): Friend => roster.find((f) => f.id === id) ?? ME,
-    [roster],
+    (id: string): Friend => {
+      if (session.isRealSession) {
+        return session.visibleMembers.find((f) => f.id === id) ?? session.visibleMembers.find((f) => f.isMe) ?? ME;
+      }
+      return demoRoster.find((f) => f.id === id) ?? ME;
+    },
+    [demoRoster, session.isRealSession, session.visibleMembers],
   );
 
   // ---- 陪跑名单 ----
   const [companionOn, setCompanionOn] = useState(true);
-  // 存过的现场观众回来时仍然在线、并优先占据跑道名额（最近加入的排前面）
   const [onlineIds, setOnlineIds] = useState<string[]>(() => [
     ...guests.map((g) => g.id),
     "ajie",
@@ -83,19 +98,34 @@ export default function App() {
     "tang",
     "yuyu",
   ]);
-  const [onTrackIds, setOnTrackIds] = useState<string[]>(() =>
-    [
+  const [onTrackIds, setOnTrackIds] = useState<string[]>(() => {
+    if (session.isRealSession) {
+      return session.visibleMembers.map((f) => f.isMe ? ME_ID : f.id);
+    }
+    return [
       ME_ID,
       ...guests.map((g) => g.id).reverse(),
       "ajie",
       "momo",
       "tang",
-    ].slice(0, MAX_ON_TRACK),
-  );
+    ].slice(0, MAX_ON_TRACK);
+  });
   const [exitingIds, setExitingIds] = useState<string[]>([]);
 
   const runners = useMemo(() => onTrackIds.map(byId), [onTrackIds, byId]);
-  const trackFull = onTrackIds.length >= MAX_ON_TRACK;
+  const trackFull = onTrackIds.length >= (Number.isFinite(MAX_ON_TRACK) ? MAX_ON_TRACK : 8) && !session.isRealSession;
+
+  // 真实会话模式下，自动同步 runners 与 visibleMembers
+  useEffect(() => {
+    if (session.isRealSession) {
+      const meMember = session.visibleMembers.find((f) => f.isMe);
+      const others = session.visibleMembers.filter((f) => !f.isMe && !exitingIds.includes(f.id));
+      setOnTrackIds([
+        meMember ? ME_ID : ME_ID,
+        ...others.map((f) => f.id),
+      ]);
+    }
+  }, [session.isRealSession, session.visibleMembers, exitingIds]);
 
   const leaveTrack = useCallback((id: string) => {
     setExitingIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -212,6 +242,10 @@ export default function App() {
 
   const handleHighFive = useCallback(
     (a: Friend, b: Friend) => {
+      // 真实会话：记录到 Supabase
+      if (session.isRealSession) {
+        session.handleHighFive(a, b);
+      }
       setFivesWith((prev) => {
         const next = { ...prev };
         for (const f of [a, b]) {
@@ -224,7 +258,7 @@ export default function App() {
         if (f.isGuest) recordHighFive(f.id);
       }
     },
-    [recordHighFive],
+    [recordHighFive, session.isRealSession, session.handleHighFive],
   );
 
   /** 观众的次数取持久化值，预设好友取基础值 + 本次会话增量 */
@@ -247,6 +281,7 @@ export default function App() {
   const [reportOpen, setReportOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<Friend | null>(null);
   const [guestToRemove, setGuestToRemove] = useState<Friend | null>(null);
   // 好友推歌：已读列表只存会话内，刷新后红点重新出现，方便反复演示
@@ -433,6 +468,16 @@ export default function App() {
           </span>
           陪跑
         </button>
+        {session.isRealSession && (
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 size={17} strokeWidth={1.8} />
+            邀请好友
+          </button>
+        )}
         <button
           type="button"
           className={styles.secondaryBtn}
@@ -546,6 +591,43 @@ export default function App() {
         data={reportData}
         onClose={() => setReportOpen(false)}
         onError={showToast}
+      />
+
+      <CreateSessionModal
+        open={showCreateModal && !session.isRealSession}
+        onCreate={async (name) => {
+          setShowCreateModal(false);
+          if (HAS_SUPABASE) {
+            await session.handleCreate(name);
+          } else {
+            showToast(`Hello ${name}！Demo 模式已就绪`);
+          }
+        }}
+        onSkipDemo={() => {
+          setShowCreateModal(false);
+        }}
+        onClose={() => {
+          setShowCreateModal(false);
+        }}
+      />
+
+      <JoinSessionModal
+        open={session.state.phase === "joining"}
+        shareCode={session.state.phase === "joining" ? session.state.shareCode : ""}
+        onJoin={session.handleJoin}
+        onClose={() => {
+          // 关闭加入弹窗，降级为 demo
+          window.history.replaceState({}, "", window.location.pathname);
+          setShowCreateModal(true);
+        }}
+      />
+
+      <ShareModal
+        open={shareOpen}
+        shareLink={session.getShareLink()}
+        memberCount={session.visibleMembers.length}
+        onClose={() => setShareOpen(false)}
+        onToast={showToast}
       />
 
       <div className={styles.toastWrap} aria-live="polite">

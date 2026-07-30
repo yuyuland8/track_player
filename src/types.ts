@@ -40,4 +40,6 @@ export type Friend = {
   isGuest?: boolean;
   /** 覆盖默认的「跑友 · 认识 N 天」关系文案 */
   relationLabel?: string;
+  /** 来自 Supabase 的真实成员行（内部使用） */
+  _memberRow?: Record<string, unknown>;
 };

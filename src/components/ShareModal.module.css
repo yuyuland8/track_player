@@ -1,0 +1,154 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  animation: overlayIn 0.25s ease;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: calc(100vw - 48px);
+  max-width: 340px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: cardIn 0.3s ease;
+  text-align: center;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #8e8e9a;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.linkBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f6ff;
+  border: 1.5px solid #d0e5ff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.linkText {
+  flex: 1;
+  font-size: 13px;
+  color: #169AF3;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: none;
+  background: #169AF3;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.copyBtn:active {
+  transform: scale(0.95);
+  background: #0f7fd6;
+}
+
+.copied {
+  background: #2EC4B6 !important;
+}
+
+.hint {
+  font-size: 12px;
+  color: #b0b0be;
+  margin: 0 0 20px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btnPrimary {
+  composes: btn;
+  background: linear-gradient(135deg, #169AF3, #31B5ED);
+  color: #fff;
+}
+
+.btnSecondary {
+  composes: btn;
+  background: #f0f1f5;
+  color: #5a5a6e;
+}
+
+.sessionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #169AF3, #31B5ED);
+  color: #fff;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.sessionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7BFA9E;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
