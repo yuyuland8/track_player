@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import Modal from "./Modal";
-import diskImg from "../assets/music-player-disk.png";
 import styles from "./ReportModal.module.css";
+
+export type ReportRank = {
+  name: string;
+  color: string;
+  minutes: number;
+  laps: number;
+};
 
 export type ReportData = {
   friendCount: number;
   minutes: number;
   laps: number;
   fives: number;
-  fiveName: string;
-  trackTitle: string;
-  coverSrc: string;
-  colors: string[];
+  leaderboard: ReportRank[];
 };
 
 type Props = {
@@ -24,48 +27,8 @@ type Props = {
 
 const W = 1080;
 const H = 1920;
-const GOLDEN = 2.399963;
-/* 与 DiskStage 保持一致：中孔占盘面 55.14%（孔心高 0.46%），车道在纹路区 */
-const LANE_RX = [0.65, 0.76, 0.87];
-const COVER_RATIO = 0.285;
-const HOLE_OFFSET_Y = -0.0046;
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`image load failed: ${src}`));
-    img.src = src;
-  });
-}
-
-function drawCoverCircle(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  cx: number,
-  cy: number,
-  radius: number,
-) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.clip();
-  const scale = Math.max(
-    (radius * 2) / img.naturalWidth,
-    (radius * 2) / img.naturalHeight,
-  );
-  const dw = img.naturalWidth * scale;
-  const dh = img.naturalHeight * scale;
-  ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
-  ctx.restore();
-}
 
 async function renderReport(data: ReportData): Promise<string> {
-  const [disk, cover] = await Promise.all([
-    loadImage(diskImg),
-    loadImage(data.coverSrc),
-  ]);
-
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -105,38 +68,83 @@ async function renderReport(data: ReportData): Promise<string> {
   ctx.textAlign = "center";
   ctx.fillText(`这一周，有 ${data.friendCount} 位好友陪我跑`, W / 2, 300);
 
-  // 唱片画面
-  const diskSize = 720;
-  const dcx = W / 2;
-  const dcy = 760;
-  drawCoverCircle(
-    ctx,
-    cover,
-    dcx,
-    dcy + diskSize * HOLE_OFFSET_Y,
-    diskSize * COVER_RATIO,
-  );
-  ctx.drawImage(disk, dcx - diskSize / 2, dcy - diskSize / 2, diskSize, diskSize);
-  // 跑道上的小伙伴
-  data.colors.forEach((color, i) => {
-    const theta = i * GOLDEN + 0.6;
-    const r = (diskSize / 2) * LANE_RX[i % 3];
-    const x = dcx + r * Math.cos(theta);
-    const y = dcy + r * 0.94 * Math.sin(theta);
+  // 伴听陪跑榜：不绑定任何单曲，突出这一周真实发生的陪伴关系
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.beginPath();
+  ctx.roundRect(90, 390, 900, 720, 48);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(22,154,243,0.12)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = "#17181A";
+  ctx.font = font(600, 48);
+  ctx.textAlign = "left";
+  ctx.fillText("伴听陪跑榜", 150, 480);
+  ctx.fillStyle = "rgba(0,0,0,0.42)";
+  ctx.font = font(400, 28);
+  ctx.textAlign = "right";
+  ctx.fillText("本周一起跑得最久的朋友", 930, 480);
+
+  if (data.leaderboard.length === 0) {
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.font = font(400, 34);
+    ctx.textAlign = "center";
+    ctx.fillText("本周还没有伴听记录，下周约个朋友一起跑", W / 2, 760);
+  }
+
+  data.leaderboard.slice(0, 3).forEach((friend, i) => {
+    const y = 610 + i * 190;
+    if (i > 0) {
+      ctx.strokeStyle = "rgba(0,0,0,0.06)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(150, y - 96);
+      ctx.lineTo(930, y - 96);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = i === 0 ? "#169AF3" : "rgba(22,154,243,0.12)";
     ctx.beginPath();
-    ctx.arc(x, y, 16, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.arc(174, y, 34, 0, Math.PI * 2);
     ctx.fill();
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.stroke();
+    ctx.fillStyle = i === 0 ? "#FFFFFF" : "#169AF3";
+    ctx.font = font(600, 30);
+    ctx.textAlign = "center";
+    ctx.fillText(String(i + 1), 174, y + 1);
+
+    ctx.fillStyle = friend.color;
+    ctx.beginPath();
+    ctx.arc(278, y, 48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = font(600, 30);
+    ctx.fillText(friend.name.slice(-1), 278, y + 1);
+
+    ctx.fillStyle = "#17181A";
+    ctx.font = font(600, 38);
+    ctx.textAlign = "left";
+    const displayName =
+      friend.name.length > 8 ? `${friend.name.slice(0, 8)}…` : friend.name;
+    ctx.fillText(displayName, 354, y - 16);
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.font = font(400, 27);
+    ctx.fillText(`一起跑了 ${friend.laps} 圈`, 354, y + 35);
+
+    ctx.fillStyle = "#169AF3";
+    ctx.font = font(600, 56);
+    ctx.textAlign = "right";
+    ctx.fillText(String(friend.minutes), 900, y - 4);
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.font = font(400, 24);
+    ctx.fillText("伴听分钟", 900, y + 38);
   });
 
   // 数据区
   const stats: Array<[string, string]> = [
-    [`${data.minutes}`, "本周同听（分钟）"],
-    [`${data.laps}`, "合跑圈数"],
-    [`${data.fives}`, `和${data.fiveName}击掌（次）`],
+    [`${data.minutes}`, "累计伴听（分钟）"],
+    [`${data.laps}`, "并肩合跑（圈）"],
+    [`${data.fives}`, "默契击掌（次）"],
   ];
   const colW = 300;
   const statY = 1300;
@@ -154,13 +162,13 @@ async function renderReport(data: ReportData): Promise<string> {
   // 情绪文案
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.font = font(400, 36);
-  ctx.fillText("最长的一程不是单曲循环", W / 2, 1540);
-  ctx.fillText("是有人一直没下线", W / 2, 1598);
+  ctx.fillText("歌可以不同，脚步却总能同频", W / 2, 1540);
+  ctx.fillText("有人陪着，普通的一圈也值得分享", W / 2, 1598);
 
-  // 歌曲与日期
+  // 榜单说明与日期
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.font = font(400, 32);
-  ctx.fillText(`♪ ${data.trackTitle} · ${dateText}`, W / 2, 1710);
+  ctx.fillText(`伴听榜每周更新 · ${dateText}`, W / 2, 1710);
 
   // 标语
   ctx.fillStyle = "#169AF3";

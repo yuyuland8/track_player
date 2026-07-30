@@ -410,18 +410,42 @@ export default function App() {
 
   const reportData: ReportData = useMemo(() => {
     const bestie = byId(BESTIE_ID);
+    const reportFriends = session.isRealSession
+      ? session.visibleMembers
+      : [...FRIENDS, ...guests];
+    const leaderboard = reportFriends
+      .map((friend) => {
+        const seed = [...friend.id].reduce(
+          (sum, char) => sum + char.charCodeAt(0),
+          0,
+        );
+        return {
+          name: friend.name,
+          color: friend.color,
+          minutes:
+            friend.baseMinutes > 0 ? friend.baseMinutes : 48 + (seed % 91),
+          laps: friend.baseLaps > 0 ? friend.baseLaps : 12 + (seed % 31),
+        };
+      })
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, 3);
     return {
-      friendCount: Math.max(onTrackIds.length - 1, 0),
+      friendCount: reportFriends.length,
       minutes: weeklyMinutes,
       laps: totalLaps,
       fives: fivesFor(bestie),
-      fiveName: bestie.name,
-      trackTitle: player.track.title,
-      coverSrc: player.track.cover,
-      colors: runners.map((f) => f.color),
+      leaderboard,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportOpen, onTrackIds, weeklyMinutes, totalLaps, fivesWith, player.track, runners]);
+  }, [
+    reportOpen,
+    weeklyMinutes,
+    totalLaps,
+    fivesWith,
+    session.isRealSession,
+    session.visibleMembers,
+    guests,
+  ]);
 
   const lyrics = lyricsMap[player.track.id] ?? [];
 
