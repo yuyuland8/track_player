@@ -213,7 +213,8 @@
 }
 
 .stateOn,
-.stateOff {
+.stateOff,
+.companionTime {
   font-size: 10px;
   line-height: 14px;
 }
@@ -224,6 +225,12 @@
 
 .stateOff {
   color: var(--text-200);
+}
+
+.companionTime {
+  margin-top: 1px;
+  color: var(--text-300);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 上/下跑道按钮 */

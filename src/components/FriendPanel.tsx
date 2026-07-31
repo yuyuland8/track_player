@@ -13,6 +13,7 @@ type Props = {
   onlineIds: string[];
   onTrackIds: string[];
   exitingIds: string[];
+  companionMinutesById: Record<string, number>;
   trackFull: boolean;
   onToggleOnline: (id: string, online: boolean) => void;
   onToggleTrack: (id: string, onTrack: boolean) => void;
@@ -37,6 +38,7 @@ export default function FriendPanel({
   onlineIds,
   onTrackIds,
   exitingIds,
+  companionMinutesById,
   trackFull,
   onToggleOnline,
   onToggleTrack,
@@ -91,6 +93,9 @@ export default function FriendPanel({
           </span>
           <span className={online ? styles.stateOn : styles.stateOff}>
             {online ? (onTrack ? "在线 · 在跑道" : "在线 · 未上跑道") : "离线"}
+          </span>
+          <span className={styles.companionTime}>
+            已陪跑伴听 {companionMinutesById[f.id] ?? 0} 分钟
           </span>
         </span>
 

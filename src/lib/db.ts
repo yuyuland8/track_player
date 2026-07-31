@@ -308,6 +308,7 @@ export function trackFriendToFriend(
     isGuest: false,
     _online: true,
     _onTrack: f.is_on_track,
+    _joinedAt: f.joined_at,
   };
 }
 

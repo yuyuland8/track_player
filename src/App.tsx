@@ -30,6 +30,13 @@ const SHOWCASE_SHORTCUTS: Record<string, { time: number; label: string }[]> = {
   "mayday-loving": [{ time: 20, label: "彩蛋 0:20" }],
 };
 
+function minutesSince(startAt: string | undefined, now: number): number {
+  if (!startAt) return 0;
+  const start = Date.parse(startAt);
+  if (!Number.isFinite(start)) return 0;
+  return Math.max(0, Math.floor((now - start) / 60_000));
+}
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -76,6 +83,14 @@ export default function App() {
 
   // ---- 真实会话 (Supabase) ----
   const session = useSession(showToast);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!session.isRealSession) return;
+    setNowMs(Date.now());
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [session.isRealSession]);
 
   // ---- Demo 模式下首次进入弹窗 ----
   const [showCreateModal, setShowCreateModal] = useState(true);
@@ -94,6 +109,42 @@ export default function App() {
   // ---- 名册：真实会话 > 我 + 预设好友 + 现场观众 ----
   const { guests, addGuest, removeGuest, recordHighFive } = useGuests();
   const demoRoster = useMemo(() => [ME, ...FRIENDS, ...guests], [guests]);
+  const companionMinutesById = useMemo(() => {
+    if (!session.isRealSession) {
+      return Object.fromEntries(
+        [...FRIENDS, ...guests].map((friend) => [
+          friend.id,
+          friend.baseMinutes,
+        ]),
+      );
+    }
+
+    const trackCreatedAt = session.currentTrack?.created_at;
+    const trackStart = trackCreatedAt ? Date.parse(trackCreatedAt) : NaN;
+    return Object.fromEntries(
+      session.visibleMembers.map((friend) => {
+        const joinedStart = friend._joinedAt
+          ? Date.parse(friend._joinedAt)
+          : NaN;
+        const effectiveStart =
+          Number.isFinite(trackStart) && Number.isFinite(joinedStart)
+            ? Math.max(trackStart, joinedStart)
+            : Number.isFinite(joinedStart)
+              ? joinedStart
+              : trackStart;
+        const minutes = Number.isFinite(effectiveStart)
+          ? Math.max(0, Math.floor((nowMs - effectiveStart) / 60_000))
+          : 0;
+        return [friend.id, minutes];
+      }),
+    );
+  }, [
+    guests,
+    nowMs,
+    session.currentTrack,
+    session.isRealSession,
+    session.visibleMembers,
+  ]);
   const recommendByFriend = useMemo(() => {
     if (!session.isRealSession) return RECOMMEND_BY_FRIEND;
     return Object.fromEntries(
@@ -272,8 +323,9 @@ export default function App() {
   const handleLap = useCallback(() => setSessionLaps((v) => v + 1), []);
   const handleRelay = useCallback(() => {}, []);
 
-  const weeklyMinutes =
-    ME.baseMinutes + Math.floor(player.getListenedSeconds() / 60);
+  const weeklyMinutes = session.isRealSession
+    ? minutesSince(session.currentTrack?.created_at, nowMs)
+    : ME.baseMinutes + Math.floor(player.getListenedSeconds() / 60);
   const totalLaps = ME.baseLaps + sessionLaps;
 
   // ---- 浮层 ----
@@ -423,7 +475,11 @@ export default function App() {
           name: friend.name,
           color: friend.color,
           minutes:
-            friend.baseMinutes > 0 ? friend.baseMinutes : 48 + (seed % 91),
+            session.isRealSession
+              ? (companionMinutesById[friend.id] ?? 0)
+              : friend.baseMinutes > 0
+                ? friend.baseMinutes
+                : 48 + (seed % 91),
           laps: friend.baseLaps > 0 ? friend.baseLaps : 12 + (seed % 31),
         };
       })
@@ -445,6 +501,7 @@ export default function App() {
     session.isRealSession,
     session.visibleMembers,
     guests,
+    companionMinutesById,
   ]);
 
   const lyrics = lyricsMap[player.track.id] ?? [];
@@ -555,6 +612,7 @@ export default function App() {
             : onTrackIds
         }
         exitingIds={exitingIds}
+        companionMinutesById={companionMinutesById}
         trackFull={trackFull}
         onToggleOnline={handleToggleOnline}
         onToggleTrack={handleToggleTrack}
@@ -608,8 +666,10 @@ export default function App() {
         }
         minutes={
           cardFriend
-            ? Math.min(cardFriend.baseMinutes, weeklyMinutes) +
-              Math.floor(player.getListenedSeconds() / 60)
+            ? session.isRealSession
+              ? (companionMinutesById[cardFriend.id] ?? 0)
+              : cardFriend.baseMinutes +
+                Math.floor(player.getListenedSeconds() / 60)
             : 0
         }
         laps={cardFriend ? cardFriend.baseLaps + sessionLaps : 0}

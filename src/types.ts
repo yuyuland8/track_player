@@ -54,4 +54,6 @@ export type Friend = {
   _online?: boolean;
   /** 生产模式中的实时跑道状态（内部使用） */
   _onTrack?: boolean;
+  /** 加入当前跑道的时间，用于计算真实伴听时长（内部使用） */
+  _joinedAt?: string;
 };

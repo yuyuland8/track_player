@@ -70,6 +70,7 @@ export function useSession(onToast: (msg: string) => void) {
                   isGuest: false,
                   _online: true,
                   _onTrack: newFriend.is_on_track,
+                  _joinedAt: newFriend.joined_at,
                 },
               ];
             });
@@ -318,6 +319,7 @@ export function useSession(onToast: (msg: string) => void) {
   const isRealSession = HAS_SUPABASE && state.phase === "active";
 
   const currentUser = state.phase === "active" ? state.user : null;
+  const currentTrack = state.phase === "active" ? state.track : null;
 
   // ---- 暴露 ----
   return {
@@ -326,6 +328,7 @@ export function useSession(onToast: (msg: string) => void) {
     visibleMembers,
     highFiveCounts,
     currentUser,
+    currentTrack,
     handleLogin,
     handleJoin,
     updateMyStatus,
